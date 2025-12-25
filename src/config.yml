@@ -1,15 +1,17 @@
 # Crayon-GraveStones configuration
 
 # If true, only the owner (dead player) can loot the grave.
-ownerOnly: true
+# (If this option is enabled, please set allowOthersToLoot to false otherwise a double Error Message appears)
+ownerOnly: false
+
+# If true and ownerOnly=false, non-owners may loot graves (drop logic applies).
+# (If this option is enabled, please set ownerOnly to false otherwise a double Error Message appears)
+allowOthersToLoot: true
 
 # If ownerOnly=false and allowOthersToLoot=true:
 # If protectDropsForOpener=true, the first player who loots a grave becomes the "opener"
 # and only THEY can pick up the dropped items (until they pick them up and re-drop them).
 protectDropsForOpener: true
-
-# If true and ownerOnly=false, non-owners may loot graves (drop logic applies).
-allowOthersToLoot: true
 
 # Seconds after which "protected drops" become free-for-all automatically (safety net).
 # Set to 0 to disable expiry (then only re-dropping makes items free).
@@ -23,22 +25,28 @@ graveBlock: ANDESITE_WALL
 # May not work always as expected if in creative or really a player is really high
 placementSearchUp: 4
 
-# Hologram (armorstand name) settings
+# Hologram (gravestone initials name) settings
 hologramEnabled: true
-hologramOffsetY: 1.2
-hologramFormat: "§7✝ §f{player} §7({date})"
+hologramOffsetX: 0.00
+hologramOffsetY: 0.375
+hologramOffsetZ: 0.00
+hologramFaceOffset: 0.25 # This entry allows you to set the display more far or near the block
+hologramDateFormat: "dd.MM.yyyy\nHH:mm"
+hologramFormat: "§7✝ t§f{player}\n§7{date}"
+hologramFacing: NORTH
+# Bigger number means bigger Display Text
+hologramTextScale: 0.55
 
 # XP behavior: fraction of the total exp to restore.
 xpRestoreFraction: 0.33
 
 # If true, non-owner looters may also take the XP fraction from the grave.
 # If false, XP fraction is only given to the owner.
-xpStealable: false
+xpStealable: true
 
 # If true and a non-owner loots with xpStealable=true, the XP fraction will be dropped as orbs at the grave location.
 # If false, the XP fraction is given directly to the looter.
-# IMPORTANT: is in TESTING!! May not always work as expected!! Is fixed in next release
-xpDropAsOrbsForNonOwner: true
+xpDropAsOrbsForNonOwner: false
 
 # If true, remove the original death drops and keep everything in the grave.
 # If false, vanilla drops still happen and the grave is just a marker.
@@ -49,3 +57,23 @@ adminCanBreak: true
 
 # World blacklist (no graves here)
 disabledWorlds: []
+
+# Change the Sounds for opening a gravestone and if a gravestone is looted successfully or if someone is not allowed to open other graves (applies if isOwner=true)
+sounds:
+  graveOpen:
+    enabled: true
+    sound: BLOCK_CHEST_OPEN
+    volume: 1.0
+    pitch: 1.0
+
+  graveLooted:
+    enabled: true
+    sound: ITEM_ARMOR_EQUIP_NETHERITE
+    volume: 1.0
+    pitch: 1.2
+
+  graveError:
+    enabled: true
+    sound: BLOCK_NOTE_BLOCK_BASS
+    volume: 1.0
+    pitch: 0.6

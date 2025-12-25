@@ -23,18 +23,19 @@ public class GraveReloadCommand implements CommandExecutor {
     public boolean onCommand( CommandSender sender, Command command, String label, String[] args) {
         if (args.length == 1 && args[0].equalsIgnoreCase("reload")) {
             if (!sender.hasPermission("graves.admin")) {
-                sender.sendMessage("§cKeine Berechtigung.");
+                sender.sendMessage("§cYou don't have the needed Permissions to do that. You believe this is an error? Look at the permissions-table.");
                 return true;
             }
             plugin.reloadConfig();
             plugin.getGraveManager().reload();
+            plugin.getGraveManager().refreshAllHolograms();
             sender.sendMessage("§aCrayon-GraveStones reloaded.");
             return true;
         }
 
         if (args.length == 1 && args[0].equalsIgnoreCase("list")) {
             if (!(sender instanceof Player p)) {
-                sender.sendMessage("§cNur ingame.");
+                sender.sendMessage("§conly ingame available.");
                 return true;
             }
 
@@ -45,11 +46,11 @@ public class GraveReloadCommand implements CommandExecutor {
                     .collect(Collectors.toList());
 
             if (graves.isEmpty()) {
-                p.sendMessage("§7Du hast aktuell keine offenen Grabsteine.");
+                p.sendMessage("§7You don't have any Gravestones in the Save-Table.");
                 return true;
             }
 
-            p.sendMessage("§aDeine offenen Grabsteine (§f" + graves.size() + "§a):");
+            p.sendMessage("§aYour available Gravestones (§f" + graves.size() + "§a):");
             for (Grave g : graves) {
                 p.sendMessage("§7- §f" + g.getOwnerName() + " §7@ §e" + g.getX() + " " + g.getY() + " " + g.getZ()
                         + " §7(" + plugin.getServer().getWorld(g.getWorldUuid()).getName() + ")");
@@ -57,7 +58,7 @@ public class GraveReloadCommand implements CommandExecutor {
             return true;
         }
 
-        sender.sendMessage("§eUsage: /graves reload §7(op) §e| /graves list");
+        sender.sendMessage("§eUsage: /graves reload §7(Admin) §e| /graves list");
         return true;
     }
 }

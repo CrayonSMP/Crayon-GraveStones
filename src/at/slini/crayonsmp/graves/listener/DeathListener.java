@@ -25,37 +25,42 @@ public class DeathListener implements Listener {
     public void onDeath(PlayerDeathEvent e) {
         Player p = e.getEntity();
 
-        if (!graveManager.isCaptureDrops()) {
-            return;
-        }
+        boolean capture = graveManager.isCaptureDrops();
 
-        // INVENTAR SLOTS sichern (Slot -> ItemStack)
+        // Default: leeres Grab (nur Marker/Koordinaten), falls capture=false
         Map<Integer, ItemStack> slotItems = new HashMap<>();
-        ItemStack[] contents = p.getInventory().getStorageContents(); // NUR Inventar+Hotbar (ohne Armor/Offhand)
-        for (int slot = 0; slot < contents.length; slot++) {
-            ItemStack it = contents[slot];
-            if (it != null && it.getType() != Material.AIR) {
-                slotItems.put(slot, it.clone());
+        ItemStack[] armor = new ItemStack[0];
+        ItemStack offHand = null;
+        int totalXpPoints = 0;
+
+        if (capture) {
+            // INVENTAR SLOTS sichern (Slot -> ItemStack)
+            ItemStack[] contents = p.getInventory().getStorageContents(); // NUR Inventar+Hotbar
+            for (int slot = 0; slot < contents.length; slot++) {
+                ItemStack it = contents[slot];
+                if (it != null && it.getType() != Material.AIR) {
+                    slotItems.put(slot, it.clone());
+                }
             }
+
+            // ARMOR + OFFHAND sichern
+            armor = p.getInventory().getArmorContents().clone();
+
+            offHand = p.getInventory().getItemInOffHand();
+            if (offHand != null) {
+                offHand = offHand.clone();
+                if (offHand.getType() == Material.AIR) offHand = null;
+            }
+
+            // ECHTE GESAMT-XP (XP-POINTS) BERECHNEN
+            totalXpPoints = ExpUtil.getTotalExperiencePoints(p);
+
+            // VANILLA DROPS + XP UNTERBINDEN (sonst Dupes)
+            e.getDrops().clear();
+            e.setDroppedExp(0);
         }
 
-
-        // ARMOR + OFFHAND sichern
-        ItemStack[] armor = p.getInventory().getArmorContents().clone();
-        ItemStack offHand = p.getInventory().getItemInOffHand();
-        if (offHand != null) {
-            offHand = offHand.clone();
-            if (offHand.getType() == Material.AIR) offHand = null;
-        }
-
-        // VANILLA DROPS + XP UNTERBINDEN
-        e.getDrops().clear();
-        e.setDroppedExp(0);
-
-        // ECHTE GESAMT-XP (XP-POINTS) BERECHNEN
-        int totalXpPoints = ExpUtil.getTotalExperiencePoints(p);
-
-        // GRAB ERSTELLEN
+        // Grab IMMER erstellen (Marker), Loot nur wenn capture=true
         graveManager.createGrave(p, p.getLocation(), slotItems, armor, offHand, totalXpPoints);
     }
 }

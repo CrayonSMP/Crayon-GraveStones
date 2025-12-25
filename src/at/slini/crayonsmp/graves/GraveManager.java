@@ -4,16 +4,21 @@ import at.slini.crayonsmp.graves.model.Grave;
 import at.slini.crayonsmp.graves.storage.GraveStorage;
 import org.bukkit.*;
 import org.bukkit.block.Block;
+import org.bukkit.block.BlockFace;
+import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
-import org.bukkit.entity.ArmorStand;
+import org.bukkit.entity.Display;
+import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.ExperienceOrb;
 import org.bukkit.entity.Item;
 import org.bukkit.entity.Player;
-import org.bukkit.inventory.EquipmentSlot;
+import org.bukkit.entity.TextDisplay;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
+import org.bukkit.util.Transformation;
+import org.joml.Vector3f;
 
 import java.time.Instant;
 import java.time.ZoneId;
@@ -24,6 +29,20 @@ public class GraveManager {
 
     private final GravePlugin plugin;
     private final GraveStorage storage;
+
+    // Sound values
+    private boolean soundOpenEnabled;
+    private Sound soundOpen;
+    private float soundOpenVolume;
+    private float soundOpenPitch;
+    private boolean soundLootEnabled;
+    private Sound soundLoot;
+    private float soundLootVolume;
+    private float soundLootPitch;
+    private boolean soundErrorEnabled;
+    private Sound soundError;
+    private float soundErrorVolume;
+    private float soundErrorPitch;
 
     // Persistent keys
     private final NamespacedKey itemLooterKey;
@@ -37,7 +56,12 @@ public class GraveManager {
     private boolean captureDrops;
     private boolean hologramEnabled;
     private double hologramOffsetY;
+    private double hologramOffsetX;
+    private double hologramOffsetZ;
+    private double hologramFaceOffset;
     private String hologramFormat;
+    private BlockFace hologramFacing;
+    private float hologramTextScale;
     private double xpRestoreFraction;
     private boolean xpStealable;
     private boolean xpDropAsOrbsForNonOwner;
@@ -46,8 +70,7 @@ public class GraveManager {
     private Set<String> disabledWorlds;
     private boolean adminCanBreak;
 
-    private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")
-            .withZone(ZoneId.systemDefault());
+    private DateTimeFormatter hologramDateFormatter;
 
     public GraveManager(GravePlugin plugin, GraveStorage storage) {
         this.plugin = plugin;
@@ -66,8 +89,12 @@ public class GraveManager {
 
         this.captureDrops = c.getBoolean("captureDrops", true);
         this.hologramEnabled = c.getBoolean("hologramEnabled", true);
-        this.hologramOffsetY = c.getDouble("hologramOffsetY", 1.2);
-        this.hologramFormat = c.getString("hologramFormat", "§7✝ §f{player} §7({date})");
+        this.hologramTextScale = (float) c.getDouble("hologramTextScale", 0.55);
+        this.hologramOffsetY = c.getDouble("hologramOffsetY", 0.375);
+        this.hologramOffsetX = c.getDouble("hologramOffsetX", 0.00);
+        this.hologramOffsetZ = c.getDouble("hologramOffsetX", 0.00);
+        this.hologramFaceOffset = c.getDouble("hologramFaceOffset", 0.25);
+        this.hologramFormat = c.getString("hologramFormat", "§7✝ §f{player}\n§7({date})");
 
         this.xpRestoreFraction = c.getDouble("xpRestoreFraction", 0.33);
         this.xpStealable = c.getBoolean("xpStealable", false);
@@ -80,11 +107,97 @@ public class GraveManager {
         this.disabledWorlds = new HashSet<>();
         for (String s : dw) disabledWorlds.add(s.toLowerCase(Locale.ROOT));
 
-        String matName = c.getString("graveBlock", "POLISHED_ANDESITE_WALL");
+        String matName = c.getString("graveBlock", "ANDESITE_WALL");
         Material m = Material.matchMaterial(matName == null ? "" : matName);
         if (m == null || !m.isBlock()) m = Material.ANDESITE_WALL;
         this.graveBlock = m;
+
+        ConfigurationSection sc = c.getConfigurationSection("sounds");
+
+        if (sc != null) {
+            ConfigurationSection open = sc.getConfigurationSection("graveOpen");
+            if (open != null) {
+                soundOpenEnabled = open.getBoolean("enabled", true);
+                soundOpen = Sound.valueOf(open.getString("sound", "BLOCK_CHEST_OPEN"));
+                soundOpenVolume = (float) open.getDouble("volume", 1.0);
+                soundOpenPitch = (float) open.getDouble("pitch", 1.0);
+            }
+
+            ConfigurationSection loot = sc.getConfigurationSection("graveLooted");
+            if (loot != null) {
+                soundLootEnabled = loot.getBoolean("enabled", true);
+                soundLoot = Sound.valueOf(loot.getString("sound", "ITEM_ARMOR_EQUIP_NETHERITE"));
+                soundLootVolume = (float) loot.getDouble("volume", 1.0);
+                soundLootPitch = (float) loot.getDouble("pitch", 1.0);
+            }
+
+            ConfigurationSection err = sc.getConfigurationSection("graveError");
+            if (err != null) {
+                soundErrorEnabled = err.getBoolean("enabled", true);
+                soundError = Sound.valueOf(err.getString("sound", "BLOCK_NOTE_BLOCK_BASS"));
+                soundErrorVolume = (float) err.getDouble("volume", 1.0);
+                soundErrorPitch = (float) err.getDouble("pitch", 0.6);
+            }
+
+        }
+        String facingRaw = c.getString("hologramFacing", "SOUTH").toUpperCase(Locale.ROOT);
+        try {
+            hologramFacing = BlockFace.valueOf(facingRaw);
+        } catch (IllegalArgumentException ex) {
+            plugin.getLogger().warning(
+                    "[Crayon-GraveStones] Invalid hologramFacing '" + facingRaw +
+                            "', falling back to SOUTH"
+            );
+            hologramFacing = BlockFace.SOUTH;
+        }
+        String dateFormat = c.getString("hologramDateFormat", "yyyy-MM-dd HH:mm");
+
+        try {
+            hologramDateFormatter = DateTimeFormatter
+                    .ofPattern(dateFormat)
+                    .withZone(ZoneId.systemDefault());
+        } catch (IllegalArgumentException ex) {
+            plugin.getLogger().warning("[Crayon-GraveStones] Invalid hologramDateFormat '" + dateFormat +
+                    "', falling back to yyyy-MM-dd HH:mm");
+            hologramDateFormatter = DateTimeFormatter
+                    .ofPattern("yyyy-MM-dd HH:mm")
+                    .withZone(ZoneId.systemDefault());
+        }
+
     }
+
+    public void refreshAllHolograms() {
+        if (!hologramEnabled) {
+            // wenn hologramme aus: vorhandene entfernen
+            for (Grave g : storage.getAll()) {
+                if (g.getHologramEntityId() != null) {
+                    removeHologramEntity(g);
+                    g.setHologramEntityId(null);
+                    storage.put(g);
+                }
+            }
+            storage.saveAsync();
+            return;
+        }
+
+        for (Grave g : storage.getAll()) {
+            UUID newId = spawnOrReplaceHologram(g);
+            g.setHologramEntityId(newId);
+            storage.put(g);
+        }
+        storage.saveAsync();
+    }
+
+    private void removeHologramEntity(Grave grave) {
+        if (grave.getHologramEntityId() == null) return;
+        for (World world : Bukkit.getWorlds()) {
+            world.getEntitiesByClass(TextDisplay.class).stream()
+                    .filter(e -> e.getUniqueId().equals(grave.getHologramEntityId()))
+                    .findFirst()
+                    .ifPresent(Entity::remove);
+        }
+    }
+
 
     public void shutdown() {
         // nothing special yet
@@ -152,7 +265,7 @@ public class GraveManager {
         storage.put(grave);
         storage.saveAsync();
 
-        owner.sendMessage("§7[§bCrayon-GraveStones§7] §fDein Grabstein ist bei §e" +
+        owner.sendMessage("§7[§bCrayon-GraveStones§7] §fYour Gravestone is at Coordinates: §e" +
                 grave.getX() + " " + grave.getY() + " " + grave.getZ() +
                 " §7in §f" + placeAt.getWorld().getName() + "§7.");
 
@@ -187,13 +300,23 @@ public class GraveManager {
         boolean isOwner = looter.getUniqueId().equals(grave.getOwnerUuid());
 
         if (ownerOnly && !isOwner) {
-            looter.sendMessage("§cDieser Grabstein gehört nicht dir.");
+            looter.sendMessage("§cThis Gravestone is not yours.");
+            if (soundErrorEnabled) {
+                looter.playSound(looter.getLocation(), soundError, soundErrorVolume, soundErrorPitch);
+            }
             return;
         }
 
         if (!isOwner && !allowOthersToLoot) {
-            looter.sendMessage("§cDu darfst fremde Grabsteine nicht plündern.");
+            looter.sendMessage("§cYou can't loot other Gravestones.");
+            if (soundErrorEnabled) {
+                looter.playSound(looter.getLocation(), soundError, soundErrorVolume, soundErrorPitch);
+            }
             return;
+        }
+
+        if (soundOpenEnabled) {
+            looter.playSound(looter.getLocation(), soundOpen, soundOpenVolume, soundOpenPitch);
         }
 
         Location baseLoc = getGraveLocation(grave);
@@ -204,10 +327,17 @@ public class GraveManager {
             restoreInventoryForOwner(looter, grave, dropLoc);
 
             int xp = calcXpFraction(grave.getTotalExp());
-            if (xp > 0) looter.giveExp(xp);
+            if (xp > 0) {
+                int xpFinal = xp;
+                Bukkit.getScheduler().runTask(plugin, () -> looter.giveExp(xpFinal));
+            }
+
+            if (soundLootEnabled) {
+                looter.playSound(looter.getLocation(), soundLoot, soundLootVolume, soundLootPitch);
+            }
 
             removeGrave(grave, looter.getUniqueId());
-            looter.sendMessage("§aDu hast deinen Grabstein geplündert.");
+            looter.sendMessage("§aYou have picked up your Gravestone.");
             return;
         }
 
@@ -217,17 +347,25 @@ public class GraveManager {
         if (xpStealable) {
             int xp = calcXpFraction(grave.getTotalExp());
             if (xp > 0) {
-                if (xpDropAsOrbsForNonOwner) {
-                    spawnXpOrbs(dropLoc, xp);
-                } else {
-                    looter.giveExp(xp);
-                }
+                int xpFinal = xp;
+                Bukkit.getScheduler().runTask(plugin, () -> {
+                    if (xpDropAsOrbsForNonOwner) {
+                        spawnXpOrbs(dropLoc, xpFinal);
+                    } else {
+                        looter.giveExp(xpFinal);
+                    }
+                });
             }
         }
 
+        if (soundLootEnabled) {
+            looter.playSound(looter.getLocation(), soundLoot, soundLootVolume, soundLootPitch);
+        }
+
         removeGrave(grave, looter.getUniqueId());
-        looter.sendMessage("§eDu hast den Grabstein von §6" + grave.getOwnerName() + " §egeplündert.");
+        looter.sendMessage("§eYou have picked up the Gravestone from §6" + grave.getOwnerName());
     }
+
 
     private int calcXpFraction(int total) {
         if (total <= 0) return 0;
@@ -342,13 +480,16 @@ public class GraveManager {
     }
 
     private void spawnXpOrbs(Location loc, int xp) {
+        if (xp <= 0 || loc == null) return;
         World w = loc.getWorld();
         if (w == null) return;
+
+        Location orbLoc = loc.clone().add(0, 0.25, 0);
 
         int remaining = xp;
         while (remaining > 0) {
             int chunk = Math.min(10, remaining);
-            ExperienceOrb orb = (ExperienceOrb) w.spawnEntity(loc, EntityType.EXPERIENCE_ORB);
+            ExperienceOrb orb = (ExperienceOrb) w.spawnEntity(orbLoc, EntityType.EXPERIENCE_ORB);
             orb.setExperience(chunk);
             remaining -= chunk;
         }
@@ -388,12 +529,13 @@ public class GraveManager {
             }
         }
 
+        // TextDisplay entfernen
         if (grave.getHologramEntityId() != null) {
             for (World world : Bukkit.getWorlds()) {
-                world.getEntitiesByClass(ArmorStand.class).stream()
-                        .filter(a -> a.getUniqueId().equals(grave.getHologramEntityId()))
+                world.getEntitiesByClass(TextDisplay.class).stream()
+                        .filter(e -> e.getUniqueId().equals(grave.getHologramEntityId()))
                         .findFirst()
-                        .ifPresent(ArmorStand::remove);
+                        .ifPresent(Entity::remove);
             }
         }
 
@@ -411,46 +553,109 @@ public class GraveManager {
         World w = Bukkit.getWorld(grave.getWorldUuid());
         if (w == null) return null;
 
+        // altes Display entfernen (wenn vorhanden)
         if (grave.getHologramEntityId() != null) {
-            w.getEntitiesByClass(ArmorStand.class).stream()
-                    .filter(a -> a.getUniqueId().equals(grave.getHologramEntityId()))
+            w.getEntitiesByClass(TextDisplay.class).stream()
+                    .filter(e -> e.getUniqueId().equals(grave.getHologramEntityId()))
                     .findFirst()
-                    .ifPresent(ArmorStand::remove);
+                    .ifPresent(Entity::remove);
         }
 
-        Location loc = new Location(w, grave.getX() + 0.5, grave.getY() + hologramOffsetY, grave.getZ() + 0.5);
-        ArmorStand as = (ArmorStand) w.spawnEntity(loc, EntityType.ARMOR_STAND);
+        Location base = new Location(w, grave.getX(), grave.getY(), grave.getZ());
+        BlockFace face = hologramFacing;
 
-        as.setInvisible(true);
-        as.setMarker(true);
-        as.setGravity(false);
-        as.setCustomNameVisible(true);
-        as.setCanPickupItems(false);
-        as.setPersistent(true);
-        as.setInvulnerable(true);
-        as.setCollidable(false);
-        as.setSilent(true);
-        as.setRemoveWhenFarAway(false);
+// Start: Blockmitte + seitliche Offsets
+        Location textLoc = base.clone().add(
+                0.5 + hologramOffsetX,
+                hologramOffsetY,
+                0.5 + hologramOffsetZ
+        );
 
-        as.addEquipmentLock(EquipmentSlot.HEAD, ArmorStand.LockType.REMOVING_OR_CHANGING);
-        as.addEquipmentLock(EquipmentSlot.CHEST, ArmorStand.LockType.REMOVING_OR_CHANGING);
-        as.addEquipmentLock(EquipmentSlot.LEGS, ArmorStand.LockType.REMOVING_OR_CHANGING);
-        as.addEquipmentLock(EquipmentSlot.FEET, ArmorStand.LockType.REMOVING_OR_CHANGING);
-        as.addEquipmentLock(EquipmentSlot.HAND, ArmorStand.LockType.REMOVING_OR_CHANGING);
-        as.addEquipmentLock(EquipmentSlot.OFF_HAND, ArmorStand.LockType.REMOVING_OR_CHANGING);
+// Abstand VOR der Blockfläche (Tiefe) – das ist der “näher dran”-Wert
+        double faceOffset = hologramFaceOffset; // aus config
+        if (faceOffset < 0.0) faceOffset = 0.0;
+        if (faceOffset > 1.5) faceOffset = 1.5;
 
-        String date = DATE_FMT.format(Instant.ofEpochMilli(grave.getCreatedAtEpochMs()));
-        String name = hologramFormat
+        switch (face) {
+            case NORTH -> textLoc.add(0, 0, -faceOffset);
+            case SOUTH -> textLoc.add(0, 0,  faceOffset);
+            case WEST  -> textLoc.add(-faceOffset, 0, 0);
+            case EAST  -> textLoc.add( faceOffset, 0, 0);
+            default -> {}
+        }
+
+
+        TextDisplay td = (TextDisplay) w.spawnEntity(textLoc, EntityType.TEXT_DISPLAY);
+
+        String date = hologramDateFormatter.format(Instant.ofEpochMilli(grave.getCreatedAtEpochMs()));
+        String text = hologramFormat
                 .replace("{player}", grave.getOwnerName())
                 .replace("{date}", date);
 
-        as.setCustomName(name);
+        td.setText(text);
 
-        return as.getUniqueId();
+        // statisch (nicht zum Spieler drehen)
+        td.setBillboard(Display.Billboard.FIXED);
+
+        // Rotation passend zur Seite
+        float yaw;
+        switch (face) {
+            case NORTH -> yaw = 180f;
+            case SOUTH -> yaw = 0f;
+            case WEST  -> yaw = 90f;
+            case EAST  -> yaw = -90f;
+            default -> yaw = 0f;
+        }
+        td.setRotation(yaw, 0f);
+
+        // -------------------------
+        // hologram fixes
+        // -------------------------
+        td.setSeeThrough(false);
+        td.setDefaultBackground(false);
+        td.setBackgroundColor(Color.fromARGB(0, 0, 0, 0));
+        td.setShadowed(false);
+        td.setAlignment(TextDisplay.TextAlignment.CENTER);
+
+        // -------------------------
+        // Textgröße aus Config anwenden (echte Skalierung via JOML)
+        // -------------------------
+        float scale = hologramTextScale;
+        if (scale < 0.05f) scale = 0.05f;
+        if (scale > 5.0f) scale = 5.0f;
+
+        // Optional: LineWidth dynamisch, damit Umbrüche bei kleiner Schrift nicht "zu früh" passieren
+        td.setLineWidth(Math.max(40, Math.min(300, (int) (200f / Math.max(0.25f, scale)))));
+
+        try {
+            Transformation t = td.getTransformation();
+            td.setTransformation(new Transformation(
+                    t.getTranslation(),
+                    t.getLeftRotation(),
+                    new org.joml.Vector3f(scale, scale, scale),
+                    t.getRightRotation()
+            ));
+        } catch (Throwable ex) {
+            plugin.getLogger().warning("[Crayon-GraveStones] Could not apply hologramTextScale via Transformation API: " + ex.getMessage());
+        }
+
+        // Bounding box (optional)
+        float boxScale = Math.max(0.25f, Math.min(2.0f, scale));
+        td.setDisplayHeight(0.35f * boxScale);
+        td.setDisplayWidth(0.90f * boxScale);
+
+        // robust / persistent
+        td.setPersistent(true);
+        td.setInvulnerable(true);
+
+        return td.getUniqueId();
     }
+
+
 
     public void bootstrapVisuals() {
         if (!hologramEnabled) return;
+
         for (Grave grave : storage.getAll()) {
             World w = Bukkit.getWorld(grave.getWorldUuid());
             if (w == null) continue;
@@ -460,15 +665,17 @@ public class GraveManager {
 
             boolean exists = false;
             if (grave.getHologramEntityId() != null) {
-                exists = w.getEntitiesByClass(ArmorStand.class).stream()
-                        .anyMatch(a -> a.getUniqueId().equals(grave.getHologramEntityId()));
+                exists = w.getEntitiesByClass(TextDisplay.class).stream()
+                        .anyMatch(e -> e.getUniqueId().equals(grave.getHologramEntityId()));
             }
+
             if (!exists) {
                 UUID newId = spawnOrReplaceHologram(grave);
                 grave.setHologramEntityId(newId);
                 storage.put(grave);
             }
         }
+
         storage.saveAsync();
     }
 }
