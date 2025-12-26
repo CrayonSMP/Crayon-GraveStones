@@ -344,6 +344,10 @@ public class GraveManager {
         // Non-owner loot: drop items on ground, optionally protected
         dropItemsForLooter(grave.getSlotItems(), dropLoc, looter.getUniqueId());
 
+        // HOTFIX: Armor + Offhand ebenfalls droppen (sonst "verschwindet" es)
+        dropArmorForLooter(grave.getArmor(), dropLoc, looter.getUniqueId());
+        dropSingleItemForLooter(grave.getOffHand(), dropLoc, looter.getUniqueId());
+
         if (xpStealable) {
             int xp = calcXpFraction(grave.getTotalExp());
             if (xp > 0) {
@@ -475,6 +479,36 @@ public class GraveManager {
                 if (expiresAt > 0) {
                     pdc.set(itemExpiresKey, PersistentDataType.LONG, expiresAt);
                 }
+            }
+        }
+    }
+
+    // HOTFIX: Armor droppen
+    private void dropArmorForLooter(ItemStack[] armor, Location loc, UUID looterUuid) {
+        if (armor == null || armor.length == 0) return;
+        for (ItemStack it : armor) {
+            dropSingleItemForLooter(it, loc, looterUuid);
+        }
+    }
+
+    // HOTFIX: einzelnes Item droppen (Armor/Offhand)
+    private void dropSingleItemForLooter(ItemStack it, Location loc, UUID looterUuid) {
+        if (it == null || it.getType() == Material.AIR) return;
+        World w = loc.getWorld();
+        if (w == null) return;
+
+        long expiresAt = 0L;
+        if (protectDropsForOpener && protectedDropTimeoutSeconds > 0) {
+            expiresAt = System.currentTimeMillis() + (protectedDropTimeoutSeconds * 1000L);
+        }
+
+        Item ent = w.dropItemNaturally(loc, it);
+
+        if (protectDropsForOpener) {
+            PersistentDataContainer pdc = ent.getPersistentDataContainer();
+            pdc.set(itemLooterKey, PersistentDataType.STRING, looterUuid.toString());
+            if (expiresAt > 0) {
+                pdc.set(itemExpiresKey, PersistentDataType.LONG, expiresAt);
             }
         }
     }
