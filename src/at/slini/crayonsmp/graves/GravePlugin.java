@@ -1,10 +1,6 @@
 package at.slini.crayonsmp.graves;
 
-import at.slini.crayonsmp.graves.listener.BlockListener;
-import at.slini.crayonsmp.graves.listener.DeathListener;
-import at.slini.crayonsmp.graves.listener.PickupListener;
-import at.slini.crayonsmp.graves.listener.EntityProtectionListener;
-import at.slini.crayonsmp.graves.listener.InteractListener;
+import at.slini.crayonsmp.graves.listener.*;
 import at.slini.crayonsmp.graves.storage.GraveStorage;
 import org.bukkit.command.PluginCommand;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -31,6 +27,7 @@ public final class GravePlugin extends JavaPlugin {
         getServer().getPluginManager().registerEvents(new PickupListener(graveManager), this);
         getServer().getPluginManager().registerEvents(new EntityProtectionListener(graveManager), this);
         getServer().getPluginManager().registerEvents(new BlockListener(graveManager), this);
+        getServer().getPluginManager().registerEvents(new ExplosionListener(graveManager), this);
 
 
         PluginCommand cmd = getCommand("graves");

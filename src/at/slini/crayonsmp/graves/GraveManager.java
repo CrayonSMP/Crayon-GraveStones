@@ -92,7 +92,7 @@ public class GraveManager {
         this.hologramTextScale = (float) c.getDouble("hologramTextScale", 0.55);
         this.hologramOffsetY = c.getDouble("hologramOffsetY", 0.375);
         this.hologramOffsetX = c.getDouble("hologramOffsetX", 0.00);
-        this.hologramOffsetZ = c.getDouble("hologramOffsetX", 0.00);
+        this.hologramOffsetZ = c.getDouble("hologramOffsetZ", 0.00);
         this.hologramFaceOffset = c.getDouble("hologramFaceOffset", 0.25);
         this.hologramFormat = c.getString("hologramFormat", "§7✝ §f{player}\n§7({date})");
 
@@ -186,6 +186,21 @@ public class GraveManager {
             storage.put(g);
         }
         storage.saveAsync();
+    }
+
+    // Restore missing grave blocks (for /graves reload)
+    public void restoreMissingGraveBlocks() {
+        for (Grave g : storage.getAll()) {
+            World w = Bukkit.getWorld(g.getWorldUuid());
+            if (w == null) continue;
+
+            Block b = w.getBlockAt(g.getX(), g.getY(), g.getZ());
+            if (b.getType() == graveBlock) continue;
+
+            if (b.isEmpty() || b.isLiquid() || b.isPassable()) {
+                b.setType(graveBlock, false);
+            }
+        }
     }
 
     private void removeHologramEntity(Grave grave) {
@@ -368,6 +383,37 @@ public class GraveManager {
 
         removeGrave(grave, looter.getUniqueId());
         looter.sendMessage("§eYou have picked up the Gravestone from §6" + grave.getOwnerName());
+    }
+
+    // Emergency open: always behaves like "non-owner click" (drops only, never gives items to opener)
+    public void emergencyOpenAsNonOwner(Player opener, Grave grave) {
+        if (opener == null || grave == null) return;
+
+        Location baseLoc = getGraveLocation(grave);
+        if (baseLoc == null || baseLoc.getWorld() == null) return;
+        Location dropLoc = baseLoc.clone().add(0.5, 1.0, 0.5);
+
+        if (soundOpenEnabled) {
+            opener.playSound(opener.getLocation(), soundOpen, soundOpenVolume, soundOpenPitch);
+        }
+
+        dropItemsForLooter(grave.getSlotItems(), dropLoc, opener.getUniqueId());
+        dropArmorForLooter(grave.getArmor(), dropLoc, opener.getUniqueId());
+        dropSingleItemForLooter(grave.getOffHand(), dropLoc, opener.getUniqueId());
+
+        if (xpStealable) {
+            int xp = calcXpFraction(grave.getTotalExp());
+            if (xp > 0) {
+                int xpFinal = xp;
+                Bukkit.getScheduler().runTask(plugin, () -> spawnXpOrbs(dropLoc, xpFinal));
+            }
+        }
+
+        if (soundLootEnabled) {
+            opener.playSound(opener.getLocation(), soundLoot, soundLootVolume, soundLootPitch);
+        }
+
+        removeGrave(grave, opener.getUniqueId());
     }
 
 
