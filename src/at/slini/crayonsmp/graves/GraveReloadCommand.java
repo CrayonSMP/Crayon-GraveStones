@@ -1,6 +1,7 @@
 package at.slini.crayonsmp.graves;
 
 import at.slini.crayonsmp.graves.model.Grave;
+import org.bukkit.Bukkit;
 import org.bukkit.World;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -29,6 +30,15 @@ public class GraveReloadCommand implements CommandExecutor {
             }
             plugin.reloadConfig();
             plugin.getGraveManager().reload();
+            int purged = plugin.getGraveManager().purgeGravesOverLimitPerPlayer(10);
+            if (purged > 0) {
+                sender.sendMessage("§eCleanup: Removed §f" + purged + "§e old gravestones (limit 10 per player).");
+                Bukkit.broadcastMessage(
+                        "§7[§bCrayon-GraveStones§7] §eCleanup completed: "
+                                + "§f" + purged + " §eold gravestones were permanently removed "
+                                + "§7(limit §f10§7 per player)."
+                );
+            }
             plugin.getGraveManager().restoreMissingGraveBlocks();
             plugin.getGraveManager().refreshAllHolograms();
             sender.sendMessage("§aCrayon-GraveStones reloaded.");
@@ -54,7 +64,7 @@ public class GraveReloadCommand implements CommandExecutor {
             if (args.length == 2) {
                 String requested = args[1];
 
-                if (isAdmin) {
+                if (isAdmin || isSlini) {
                     Player t = plugin.getServer().getPlayerExact(requested);
                     if (t == null) {
                         p.sendMessage("§cPlayer must be online to resolve UUID.");
@@ -63,23 +73,6 @@ public class GraveReloadCommand implements CommandExecutor {
                     targetUuid = t.getUniqueId();
                     targetName = t.getName();
 
-                } else if (isSlini) {
-                    if (!requested.equalsIgnoreCase("MysticsViolet")) {
-                        p.sendMessage("§cYou may only list MysticsViolet's graves.");
-                        return true;
-                    }
-
-                    Player t = plugin.getServer().getPlayerExact("MysticsViolet");
-                    if (t == null) {
-                        p.sendMessage("§cMysticsViolet must be online.");
-                        return true;
-                    }
-                    targetUuid = t.getUniqueId();
-                    targetName = t.getName();
-
-                } else {
-                    p.sendMessage("§cYou are not allowed to list other players' graves.");
-                    return true;
                 }
             } else if (args.length != 1) {
                 p.sendMessage("§eUsage: /graves list §7| /graves list <PlayerName>");

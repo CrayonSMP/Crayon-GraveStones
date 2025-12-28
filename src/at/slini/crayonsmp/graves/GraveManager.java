@@ -188,6 +188,44 @@ public class GraveManager {
         storage.saveAsync();
     }
 
+    public int purgeGravesOverLimitPerPlayer(int maxPerPlayer) {
+        if (maxPerPlayer < 0) maxPerPlayer = 0;
+
+        // OwnerUUID -> Liste seiner Gräber
+        Map<UUID, List<Grave>> byOwner = new HashMap<>();
+        for (Grave g : storage.getAll()) {
+            byOwner.computeIfAbsent(g.getOwnerUuid(), k -> new ArrayList<>()).add(g);
+        }
+
+        int removed = 0;
+
+        for (Map.Entry<UUID, List<Grave>> entry : byOwner.entrySet()) {
+            List<Grave> list = entry.getValue();
+            if (list.size() <= maxPerPlayer) continue;
+
+            // älteste zuerst
+            list.sort(Comparator.comparingLong(Grave::getCreatedAtEpochMs));
+
+            int toRemove = list.size() - maxPerPlayer;
+            for (int i = 0; i < toRemove; i++) {
+                Grave g = list.get(i);
+
+                // Hologramm + Block entfernen + Storage-Remove
+                // removerUuid ist hier egal, wir geben ownerUuid mit
+                removeGrave(g, g.getOwnerUuid());
+                removed++;
+            }
+        }
+
+        // removeGrave() macht bereits saveAsync(), aber wir sparen I/O:
+        // Falls removeGrave() intern saveAsync() macht, könntest du dort optional rausnehmen.
+        // Hier nochmal sicherheitshalber speichern:
+        storage.saveAsync();
+
+        return removed;
+    }
+
+
     // Restore missing grave blocks (for /graves reload)
     public void restoreMissingGraveBlocks() {
         for (Grave g : storage.getAll()) {
@@ -247,7 +285,34 @@ public class GraveManager {
             int totalXpPoints
     ) {
         if (owner == null || deathLoc == null || deathLoc.getWorld() == null) return Optional.empty();
+
         if (isWorldDisabled(deathLoc.getWorld())) return Optional.empty();
+        // Warnung ab 8 bestehenden Gräbern
+        int existing = (int) storage.getAll().stream()
+                .filter(g -> g.getOwnerUuid().equals(owner.getUniqueId()))
+                .count();
+
+        if (existing >= 8) {
+            owner.sendMessage("§eWarning: You already have §f" + existing + "§e gravestones stored. \n §cNow it's §f" + (existing + 1) +  " §cGraves.");
+            owner.sendMessage("§eIf you reach §f10§e or more, your §coldest§e gravestones will be removed on reload to reduce data trash.");
+
+            // Admin-Info an Reload-berechtigte Personen
+            String adminMsg = "§7[§bCrayon-GraveStones§7] §ePlayer §f" + owner.getName()
+                    + " §ehas §f" + existing + "§e gravestones and has been warned.";
+
+            Bukkit.getOnlinePlayers().stream()
+                    .filter(p ->
+                            p.hasPermission("graves.admin") ||
+                                    p.hasPermission("graves.slini")
+                    )
+                    .forEach(p -> p.sendMessage(adminMsg));
+
+            // optional auch in Konsole loggen
+            plugin.getLogger().warning(
+                    "[Crayon-GraveStones] Player " + owner.getName() +
+                            " has " + existing + " gravestones and was warned."
+            );
+        }
 
         Location placeAt = findPlaceableLocation(deathLoc);
         if (placeAt == null) return Optional.empty();
@@ -289,20 +354,64 @@ public class GraveManager {
 
     private Location findPlaceableLocation(Location base) {
         World w = base.getWorld();
-        int x = base.getBlockX();
-        int z = base.getBlockZ();
+        if (w == null) return null;
+
+        int x0 = base.getBlockX();
+        int z0 = base.getBlockZ();
         int y0 = base.getBlockY();
 
-        for (int dy = 0; dy <= placementSearchUp; dy++) {
+        // Ladder/edge cases: man schaut auch leicht nach unten
+        int searchDown = 2;
+
+        // Erst direkte Spalte (x0/z0) prüfen
+        Location direct = findPlaceableInColumn(w, x0, z0, y0, searchDown);
+        if (direct != null) return direct;
+
+        // Fallback: kleine Umgebung (Radius 1), weil Spieler bei Leitern oft im Luftblock davor stehen
+        for (int dx = -1; dx <= 1; dx++) {
+            for (int dz = -1; dz <= 1; dz++) {
+                if (dx == 0 && dz == 0) continue;
+                Location loc = findPlaceableInColumn(w, x0 + dx, z0 + dz, y0, searchDown);
+                if (loc != null) return loc;
+            }
+        }
+
+        // NEU: Wenn oben nix ging (Tod in Luft / über Void / etc.) -> Bodensuche nach unten
+        int startY = Math.min(w.getMaxHeight() - 2, Math.max(w.getMinHeight(), y0));
+        for (int y = startY; y >= w.getMinHeight(); y--) {
+            Block ground = w.getBlockAt(x0, y, z0);
+            if (!ground.getType().isSolid()) continue;
+
+            Block above = w.getBlockAt(x0, y + 1, z0);
+            if (above.isEmpty() || above.isPassable() || above.isLiquid()) {
+                return new Location(w, x0, y + 1, z0);
+            }
+        }
+
+        // letzter Notnagel: Worldspawn
+        return w.getSpawnLocation();
+    }
+
+    private Location findPlaceableInColumn(World w, int x, int z, int y0, int searchDown) {
+        for (int dy = -searchDown; dy <= placementSearchUp; dy++) {
             int y = y0 + dy;
             if (y < w.getMinHeight() || y > w.getMaxHeight() - 1) continue;
             Block b = w.getBlockAt(x, y, z);
-            if (b.isEmpty() || b.isLiquid() || b.isPassable()) {
-                return new Location(w, x, y, z);
-            }
+
+            // replaceable: air / passable / liquids
+            boolean replaceable = b.isEmpty() || b.isLiquid() || b.isPassable();
+            if (!replaceable) continue;
+
+            // Support-Check: unter dem Grab muss was Solides sein, sonst “Wall verschwindet”
+            Block below = b.getRelative(BlockFace.DOWN);
+            boolean hasSupport = below.getType().isSolid();
+            if (!hasSupport) continue;
+
+            return new Location(w, x, y, z);
         }
         return null;
     }
+
 
     public Optional<Grave> getGraveAt(Block block) {
         if (block == null || block.getWorld() == null) return Optional.empty();

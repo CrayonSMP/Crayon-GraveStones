@@ -36,6 +36,10 @@ public final class GravePlugin extends JavaPlugin {
         }
 
         getLogger().info("Crayon-GraveStones enabled.");
+        int purged = getGraveManager().purgeGravesOverLimitPerPlayer(10);
+        if (purged > 0) {
+            getLogger().warning("All Graves over 10 where cleaned");
+        }
     }
 
     @Override
