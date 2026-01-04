@@ -177,8 +177,8 @@ public class GraveManager {
     }
 
     public void refreshAllHolograms() {
-        boolean changed = false;
         if (!this.hologramEnabled) {
+            boolean changed = false;
             for (Grave g : this.storage.getAll()) {
                 if (g.getHologramEntityId() != null) {
                     removeHologramEntity(g);
@@ -190,28 +190,15 @@ public class GraveManager {
             if (changed) this.storage.saveAsync();
             return;
         }
+        boolean changed = false;
         for (Grave g : this.storage.getAll()) {
             World w = Bukkit.getWorld(g.getWorldUuid());
-
-            if (w == null || isWorldDisabled(w)) {
-                if (g.getHologramEntityId() != null) {
-                    removeHologramEntity(g);
-                    g.setHologramEntityId(null);
-                    this.storage.put(g);
-                    changed = true;
-                }
+            if (w == null) continue;
+            if (isWorldDisabled(w)) {
                 continue;
             }
             UUID newId = spawnOrReplaceHologram(g);
-            if (newId == null) {
-                if (g.getHologramEntityId() != null) {
-                    g.setHologramEntityId(null);
-                    this.storage.put(g);
-                    changed = true;
-                }
-                continue;
-            }
-            if (g.getHologramEntityId() == null || !g.getHologramEntityId().equals(newId)) {
+            if (newId != null && !newId.equals(g.getHologramEntityId())) {
                 g.setHologramEntityId(newId);
                 this.storage.put(g);
                 changed = true;
@@ -683,31 +670,48 @@ public class GraveManager {
         if (grave == null) return null;
         World w = Bukkit.getWorld(grave.getWorldUuid());
         if (w == null) return null;
-        if (isWorldDisabled(w)) return null;
+
+        // In disabled worlds NICHT löschen/ersetzen – sonst verschwinden sie bei Reload/Restart.
+        // Einfach den aktuellen Wert zurückgeben (kann auch null sein, dann ist es halt so).
+        if (isWorldDisabled(w)) {
+            return grave.getHologramEntityId();
+        }
+
+        // Nur in aktiven Welten entfernen und neu erstellen
         removeHologramEntity(grave);
 
         Location base = new Location(w, grave.getX(), grave.getY(), grave.getZ());
         BlockFace face = this.hologramFacing;
 
-        Location textLoc = base.clone().add(0.5D + this.hologramOffsetX, this.hologramOffsetY, 0.5D + this.hologramOffsetZ);
+        Location textLoc = base.clone().add(
+                0.5D + this.hologramOffsetX,
+                this.hologramOffsetY,
+                0.5D + this.hologramOffsetZ
+        );
 
         double faceOffset = this.hologramFaceOffset;
         if (faceOffset < 0.0D) faceOffset = 0.0D;
         if (faceOffset > 1.5D) faceOffset = 1.5D;
         switch (face) {
             case NORTH -> textLoc.add(0.0D, 0.0D, -faceOffset);
-            case SOUTH -> textLoc.add(0.0D, 0.0D, faceOffset);
-            case WEST -> textLoc.add(-faceOffset, 0.0D, 0.0D);
-            case EAST -> textLoc.add(faceOffset, 0.0D, 0.0D);
-            default -> {
-            }
+            case SOUTH -> textLoc.add(0.0D, 0.0D,  faceOffset);
+            case WEST  -> textLoc.add(-faceOffset, 0.0D, 0.0D);
+            case EAST  -> textLoc.add( faceOffset, 0.0D, 0.0D);
+            default -> { }
         }
+
         TextDisplay td = (TextDisplay) w.spawnEntity(textLoc, EntityType.TEXT_DISPLAY);
 
-        td.getPersistentDataContainer().set(this.hologramGraveIdKey, PersistentDataType.STRING, grave.getId().toString());
+        td.getPersistentDataContainer().set(
+                this.hologramGraveIdKey,
+                PersistentDataType.STRING,
+                grave.getId().toString()
+        );
 
         String date = this.hologramDateFormatter.format(Instant.ofEpochMilli(grave.getCreatedAtEpochMs()));
-        String text = this.hologramFormat.replace("{player}", grave.getOwnerName()).replace("{date}", date);
+        String text = this.hologramFormat
+                .replace("{player}", grave.getOwnerName())
+                .replace("{date}", date);
 
         td.setText(text);
         td.setBillboard(Display.Billboard.FIXED);
@@ -715,9 +719,9 @@ public class GraveManager {
         switch (face) {
             case NORTH -> yaw = 180.0F;
             case SOUTH -> yaw = 0.0F;
-            case WEST -> yaw = 90.0F;
-            case EAST -> yaw = -90.0F;
-            default -> yaw = 0.0F;
+            case WEST  -> yaw = 90.0F;
+            case EAST  -> yaw = -90.0F;
+            default    -> yaw = 0.0F;
         }
         td.setRotation(yaw, 0.0F);
         td.setSeeThrough(false);
@@ -731,7 +735,12 @@ public class GraveManager {
         td.setLineWidth(Math.max(40, Math.min(300, (int) (200.0F / Math.max(0.25F, scale)))));
         try {
             Transformation t = td.getTransformation();
-            td.setTransformation(new Transformation(t.getTranslation(), t.getLeftRotation(), new Vector3f(scale, scale, scale), t.getRightRotation()));
+            td.setTransformation(new Transformation(
+                    t.getTranslation(),
+                    t.getLeftRotation(),
+                    new Vector3f(scale, scale, scale),
+                    t.getRightRotation()
+            ));
         } catch (Throwable ex) {
             this.plugin.getLogger().warning("[bGraveStones] Could not apply hologramTextScale via Transformation API: " + ex.getMessage());
         }

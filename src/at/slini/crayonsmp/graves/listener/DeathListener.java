@@ -1,6 +1,7 @@
 package at.slini.crayonsmp.graves.listener;
 
 import at.slini.crayonsmp.graves.GraveManager;
+import at.slini.crayonsmp.graves.model.Grave;
 import at.slini.crayonsmp.graves.util.ExpUtil;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
@@ -12,6 +13,7 @@ import org.bukkit.inventory.ItemStack;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 
 public class DeathListener implements Listener {
 
@@ -25,6 +27,9 @@ public class DeathListener implements Listener {
     public void onDeath(PlayerDeathEvent e) {
         Player p = e.getEntity();
 
+        if (graveManager.isWorldDisabled(p.getWorld())) {
+            return;
+        }
         boolean capture = graveManager.isCaptureDrops();
 
         Map<Integer, ItemStack> slotItems = new HashMap<>();
@@ -50,11 +55,20 @@ public class DeathListener implements Listener {
             }
 
             totalXpPoints = ExpUtil.getTotalExperiencePoints(p);
+        }
 
+        Optional<Grave> created = graveManager.createGrave(
+                p,
+                p.getLocation(),
+                slotItems,
+                armor,
+                offHand,
+                totalXpPoints
+        );
+
+        if (capture && created.isPresent()) {
             e.getDrops().clear();
             e.setDroppedExp(0);
         }
-
-        graveManager.createGrave(p, p.getLocation(), slotItems, armor, offHand, totalXpPoints);
     }
 }

@@ -32,6 +32,7 @@ placementSearchUp: 65
 placementSearchDown: 0
 
 # this variable defines the maximum limit of total graves a player can have if the MySQL Support is not enabled
+# !!server restart required!!
 graveLimit: 10
 
 # Hologram (gravestone initials name) settings
@@ -65,7 +66,7 @@ captureDrops: true
 adminCanBreak: true
 
 # World blacklist (no graves here) if you want to disable more than one world, seperate each world with an comma e.g. ["world_nether", "world_the_end"]
-# !!server restart required!!
+# Holograms are a bit buggy if a world gets disabled (fixed in next release)
 disabledWorlds: []
 
 # Maximum Graves one page lists with /graves list
