@@ -1,0 +1,15 @@
+# If enabled=false OR the values below are still the sample values, MySQL will NOT be used.
+enabled: false
+
+host: "127.0.0.1"
+port: 3306
+database: "database"
+username: "user"
+password: "password"
+usetablePrefix: false
+tablePrefix: "crayon_"
+useSSL: false
+
+# !!Not implemented yet!!
+# Optional JDBC parameters (no leading '?')
+parameters: "useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC"

@@ -21,5 +21,6 @@
     <orderEntry type="library" name="craft-engine-bukkit-0.0.66" level="project" />
     <orderEntry type="library" name="craft-engine-core-0.0.66" level="project" />
     <orderEntry type="library" name="joml-1.10.8" level="project" />
+    <orderEntry type="library" name="BungeeCord" level="project" />
   </component>
 </module>

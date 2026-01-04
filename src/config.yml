@@ -1,4 +1,7 @@
-# Crayon-GraveStones configuration
+# Better-GraveStones configuration
+# everything you see here is customizable in the plugin by you
+# if you see exclamation marks at one variable, that means you'll need to restart the server
+# after you saved the configuration part which needs a restart, for all other options a reload should do it
 
 # If true, only the owner (dead player) can loot the grave.
 # (If this option is enabled, please set allowOthersToLoot to false otherwise a double Error Message appears)
@@ -23,7 +26,13 @@ graveBlock: ANDESITE_WALL
 
 # If the spot is not placeable, we search upward by this many blocks.
 # May not work always as expected if in creative or really a player is really high
-placementSearchUp: 4
+placementSearchUp: 65
+
+# How far to search downward when placing a grave (fixes ladder / dying in air edge cases)
+placementSearchDown: 0
+
+# this variable defines the maximum limit of total graves a player can have if the MySQL Support is not enabled
+graveLimit: 10
 
 # Hologram (gravestone initials name) settings
 hologramEnabled: true
@@ -32,7 +41,7 @@ hologramOffsetY: 0.375
 hologramOffsetZ: 0.00
 hologramFaceOffset: 0.25 # This entry allows you to set the display more far or near the block
 hologramDateFormat: "dd.MM.yyyy\nHH:mm"
-hologramFormat: "§7✝ t§f{player}\n§7{date}"
+hologramFormat: "§7✝ §f{player}\n§7{date}"
 hologramFacing: NORTH
 # Bigger number means bigger Display Text
 hologramTextScale: 0.55
@@ -55,8 +64,18 @@ captureDrops: true
 # Allow admins to break/remove graves (without looting) with permission graves.admin
 adminCanBreak: true
 
-# World blacklist (no graves here)
+# World blacklist (no graves here) if you want to disable more than one world, seperate each world with an comma e.g. ["world_nether", "world_the_end"]
+# !!server restart required!!
 disabledWorlds: []
+
+# Maximum Graves one page lists with /graves list
+listPageSize: 10
+
+# Permission used to access the teleportation feature on the ingame chat
+graveTeleportPermission: "graves.admin.tp"
+
+# player, that are allowed to use the emergency command, if you want to add more players to this list you'll separate them by a comma e.g. ["TamashiiMon", "SLINIcraftet204"]
+emergencyPlayers: ["TamashiiMon"]
 
 # Change the Sounds for opening a gravestone and if a gravestone is looted successfully or if someone is not allowed to open other graves (applies if isOwner=true)
 sounds:

@@ -1,0 +1,52 @@
+# All in-game messages (chat + broadcast). Color codes: use &
+
+errors:
+  noPermission: "&cYou don't have the needed permissions to do that."
+  onlyIngame: "&conly ingame available."
+  playerMustBeOnline: "&cPlayer must be online to resolve UUID."
+
+reload:
+  done: "&abGraveStones reloaded."
+
+cleanup:
+  removed: "&eCleanup: Removed &f{count}&e old gravestones (limit {limit} per player)."
+  broadcast: "&6[bGraveStones] &eOld gravestones above the limit were removed (&flimit {limit}&e per player)."
+
+list:
+  noSelf: "&7You don't have any Gravestones in the Save-Table."
+  noOther: "&7That player doesn't have any Gravestones in the Save-Table."
+  titleSelf: "&aYour available Gravestones (&f{count}&a)&7(Page {page}/{pages}):"
+  titleOther: "&aGravestones of &f{player} &a(&f{count}&a)&7(Page {page}/{pages}):"
+  entry: "&7- &f{player} &7@ &e{x} {y} {z} &7({world})"
+  usage: "&eUsage: /graves list &7| /graves list <PlayerName>"
+
+nav:
+  prev: "&7◀ Prev"
+  next: "&7Next ▶"
+  sep: " &8| "
+  page: "&7Page {page}/{pages}"
+
+emergency:
+  usage: "&eUsage: /graves emergency <PlayerName>"
+  onlyEmergencyPlayer: "&cThis command is restricted."
+  noGraveFound: "&cNo gravestone found for that player."
+  done: "&aEmergency opened latest gravestone of &f{player}&a (items dropped)."
+
+usage:
+  main: "&eUsage: /graves reload &7(Admin) &e| /graves list &7[(PlayerName) | Admin] &e| /graves emergency <PlayerName>"
+
+warnings:
+  storageNearLimit:
+    player: "&eWarning: You already have &f{existing}&e gravestones stored.\n&cNow it's &f{now}&c graves.\n&eIf you reach &f{limit}&e or more, your &coldest&e gravestones will be removed on reload to reduce data waste."
+    staff: "&6[bGraveStones] &ePlayer &f{player}&e got a storage warning. Stored graves now: &f{now} / {limit}&e."
+
+grave:
+  created: "&6[bGraveStones] &7Your Gravestone is at Coordinates: &e{x} {y} {z} &7in &f{world}&7."
+  notYours: "&cThis Gravestone is not yours."
+  cantLootOthers: "&cYou can't loot other Gravestones."
+  pickedUpSelf: "&aYou have picked up your Gravestone."
+  pickedUpOther: "&eYou have picked up the Gravestone from &6{owner}"
+
+gravestone:
+  removed: "&aGravestone removed."
+  placeDenied: "&cYou can't place blocks here because a Gravestone is occupying this block."

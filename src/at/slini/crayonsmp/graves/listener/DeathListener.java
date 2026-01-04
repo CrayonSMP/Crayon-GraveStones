@@ -27,15 +27,13 @@ public class DeathListener implements Listener {
 
         boolean capture = graveManager.isCaptureDrops();
 
-        // Default: leeres Grab (nur Marker/Koordinaten), falls capture=false
         Map<Integer, ItemStack> slotItems = new HashMap<>();
         ItemStack[] armor = new ItemStack[0];
         ItemStack offHand = null;
         int totalXpPoints = 0;
 
         if (capture) {
-            // INVENTAR SLOTS sichern (Slot -> ItemStack)
-            ItemStack[] contents = p.getInventory().getStorageContents(); // NUR Inventar+Hotbar
+            ItemStack[] contents = p.getInventory().getStorageContents();
             for (int slot = 0; slot < contents.length; slot++) {
                 ItemStack it = contents[slot];
                 if (it != null && it.getType() != Material.AIR) {
@@ -43,7 +41,6 @@ public class DeathListener implements Listener {
                 }
             }
 
-            // ARMOR + OFFHAND sichern
             armor = p.getInventory().getArmorContents().clone();
 
             offHand = p.getInventory().getItemInOffHand();
@@ -52,15 +49,12 @@ public class DeathListener implements Listener {
                 if (offHand.getType() == Material.AIR) offHand = null;
             }
 
-            // ECHTE GESAMT-XP (XP-POINTS) BERECHNEN
             totalXpPoints = ExpUtil.getTotalExperiencePoints(p);
 
-            // VANILLA DROPS + XP UNTERBINDEN (sonst Dupes)
             e.getDrops().clear();
             e.setDroppedExp(0);
         }
 
-        // Grab IMMER erstellen (Marker), Loot nur wenn capture=true
         graveManager.createGrave(p, p.getLocation(), slotItems, armor, offHand, totalXpPoints);
     }
 }

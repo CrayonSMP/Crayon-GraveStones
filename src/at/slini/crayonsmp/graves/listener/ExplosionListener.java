@@ -35,7 +35,6 @@ public class ExplosionListener implements Listener {
             Block b = it.next();
             Optional<Grave> opt = graveManager.getGraveAt(b);
             if (opt.isPresent()) {
-                // nur diesen Block aus der Explosions-Liste entfernen
                 it.remove();
             }
         }

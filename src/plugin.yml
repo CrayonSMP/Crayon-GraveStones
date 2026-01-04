@@ -1,6 +1,6 @@
-name: Crayon-GraveStones
+name: Better-GraveStones
 main: at.slini.crayonsmp.graves.GravePlugin
-version: 1.5.0-HOTFIX
+version: 2.5.5-PRE
 api-version: "1.21"
 authors: [ "SLINIcraftet204" ]
 description: Gravestones with configurable loot/ownership rules.
