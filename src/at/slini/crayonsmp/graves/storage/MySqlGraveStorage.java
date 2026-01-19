@@ -127,7 +127,7 @@ public class MySqlGraveStorage implements IGraveStorage {
                 this.cache.put(id, g);
             }
         } catch (Throwable t) {
-            this.plugin.getLogger().severe("[bGraveStones] Failed to load graves from MySQL: " + t.getMessage());
+            this.plugin.getLogger().severe("Failed to load graves from MySQL: " + t.getMessage());
         }
     }
 
@@ -160,7 +160,7 @@ public class MySqlGraveStorage implements IGraveStorage {
             }
             ps.executeBatch();
         } catch (Exception e) {
-            this.plugin.getLogger().severe("[bGraveStones] Failed to save graves to MySQL: " + e.getMessage());
+            this.plugin.getLogger().severe("Failed to save graves to MySQL: " + e.getMessage());
         }
     }
 
@@ -186,7 +186,7 @@ public class MySqlGraveStorage implements IGraveStorage {
                 ps.setString(1, graveId.toString());
                 ps.executeUpdate();
             } catch (SQLException e) {
-                this.plugin.getLogger().warning("[bGraveStones] Failed to delete grave from MySQL: " + e.getMessage());
+                this.plugin.getLogger().warning("Failed to delete grave from MySQL: " + e.getMessage());
             }
         });
     }
@@ -230,7 +230,7 @@ public class MySqlGraveStorage implements IGraveStorage {
         try {
             save();
         } catch (Throwable t) {
-            this.plugin.getLogger().warning("[bGraveStones] YAML->MySQL migration failed (kept YAML data): " + t.getMessage());
+            this.plugin.getLogger().warning("YAML->MySQL migration failed (kept YAML data): " + t.getMessage());
             return 0;
         }
 
@@ -242,7 +242,7 @@ public class MySqlGraveStorage implements IGraveStorage {
             }
             yamlStorage.saveAsync();
         } catch (Throwable t) {
-            this.plugin.getLogger().warning("[bGraveStones] Migrated to MySQL, but could not clean YAML storage: " + t.getMessage());
+            this.plugin.getLogger().warning("Migrated to MySQL, but could not clean YAML storage: " + t.getMessage());
         }
 
         return imported;
