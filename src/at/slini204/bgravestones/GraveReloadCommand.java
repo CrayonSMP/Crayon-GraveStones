@@ -5,14 +5,11 @@ import at.slini204.bgravestones.model.Grave;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Optional;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 import org.bukkit.Location;
 import org.bukkit.World;
@@ -87,28 +84,35 @@ public class GraveReloadCommand implements CommandExecutor, TabCompleter {
         return p.hasPermission(perm);
     }
 
-    /**
-     * Liefert alle gespeicherten Grab-Besitzer aus dem aktiven Storage.
-     * Funktioniert dadurch sowohl für YAML-Storage als auch für MySQL-Storage,
-     * weil beide Storages ihre Gräber über getAll() bereitstellen.
-     */
-    private List<StoredGraveOwner> getStoredOwners() {
-        Collection<Grave> graves = this.plugin.getGraveStorage().getAll();
-        if (graves == null || graves.isEmpty()) {
+    private Collection<Grave> getAllGravesSafe() {
+        if (plugin == null || plugin.getGraveStorage() == null) {
             return Collections.emptyList();
         }
 
-        Map<UUID, StoredGraveOwner> ownersByUuid = new LinkedHashMap<>();
+        Collection<Grave> graves = plugin.getGraveStorage().getAll();
+        return graves == null ? Collections.emptyList() : graves;
+    }
 
-        graves.stream()
-                .filter(g -> g != null && g.getOwnerUuid() != null)
-                .sorted(Comparator.comparingLong(Grave::getCreatedAtEpochMs).reversed())
-                .forEach(grave -> ownersByUuid.putIfAbsent(
-                        grave.getOwnerUuid(),
-                        new StoredGraveOwner(grave.getOwnerUuid(), normalizeStoredOwnerName(grave))
-                ));
+    private Map<UUID, String> getStoredOwnerNamesByUuid() {
+        List<Grave> sorted = new ArrayList<>();
 
-        return new ArrayList<>(ownersByUuid.values());
+        for (Grave grave : getAllGravesSafe()) {
+            if (grave != null && grave.getOwnerUuid() != null) {
+                sorted.add(grave);
+            }
+        }
+
+        sorted.sort((a, b) -> Long.compare(b.getCreatedAtEpochMs(), a.getCreatedAtEpochMs()));
+
+        Map<UUID, String> ownersByUuid = new LinkedHashMap<>();
+        for (Grave grave : sorted) {
+            UUID ownerUuid = grave.getOwnerUuid();
+            if (!ownersByUuid.containsKey(ownerUuid)) {
+                ownersByUuid.put(ownerUuid, normalizeStoredOwnerName(grave));
+            }
+        }
+
+        return ownersByUuid;
     }
 
     private String normalizeStoredOwnerName(Grave grave) {
@@ -119,40 +123,49 @@ public class GraveReloadCommand implements CommandExecutor, TabCompleter {
         return grave.getOwnerUuid().toString();
     }
 
-    private Optional<StoredGraveOwner> resolveStoredOwner(String input) {
+    private UUID resolveStoredOwnerUuid(String input) {
         if (input == null || input.isBlank()) {
-            return Optional.empty();
+            return null;
         }
 
         String query = input.trim();
-        List<StoredGraveOwner> owners = getStoredOwners();
+        Map<UUID, String> owners = getStoredOwnerNamesByUuid();
 
         try {
             UUID uuid = UUID.fromString(query);
-            return owners.stream()
-                    .filter(owner -> owner.uuid.equals(uuid))
-                    .findFirst();
+            return owners.containsKey(uuid) ? uuid : null;
         } catch (IllegalArgumentException ignored) {}
 
         String lowerQuery = query.toLowerCase(Locale.ROOT);
+        UUID prefixMatch = null;
+        int prefixMatches = 0;
 
-        Optional<StoredGraveOwner> exact = owners.stream()
-                .filter(owner -> owner.name.equalsIgnoreCase(query))
-                .findFirst();
+        for (Map.Entry<UUID, String> entry : owners.entrySet()) {
+            String name = entry.getValue();
+            if (name == null) {
+                continue;
+            }
 
-        if (exact.isPresent()) {
-            return exact;
+            if (name.equalsIgnoreCase(query)) {
+                return entry.getKey();
+            }
+
+            if (name.toLowerCase(Locale.ROOT).startsWith(lowerQuery)) {
+                prefixMatch = entry.getKey();
+                prefixMatches++;
+            }
         }
 
-        List<StoredGraveOwner> prefixMatches = owners.stream()
-                .filter(owner -> owner.name.toLowerCase(Locale.ROOT).startsWith(lowerQuery))
-                .collect(Collectors.toList());
+        return prefixMatches == 1 ? prefixMatch : null;
+    }
 
-        if (prefixMatches.size() == 1) {
-            return Optional.of(prefixMatches.get(0));
+    private String getStoredOwnerName(UUID ownerUuid) {
+        if (ownerUuid == null) {
+            return "unknown";
         }
 
-        return Optional.empty();
+        String name = getStoredOwnerNamesByUuid().get(ownerUuid);
+        return name == null || name.isBlank() ? ownerUuid.toString() : name;
     }
 
     private List<Grave> getGravesOf(UUID ownerUuid) {
@@ -160,32 +173,98 @@ public class GraveReloadCommand implements CommandExecutor, TabCompleter {
             return Collections.emptyList();
         }
 
-        return this.plugin.getGraveStorage().getAll().stream()
-                .filter(g -> g != null && ownerUuid.equals(g.getOwnerUuid()))
-                .sorted(Comparator.comparingLong(Grave::getCreatedAtEpochMs).reversed())
-                .collect(Collectors.toList());
+        List<Grave> result = new ArrayList<>();
+        for (Grave grave : getAllGravesSafe()) {
+            if (grave != null && ownerUuid.equals(grave.getOwnerUuid())) {
+                result.add(grave);
+            }
+        }
+
+        result.sort((a, b) -> Long.compare(b.getCreatedAtEpochMs(), a.getCreatedAtEpochMs()));
+        return result;
     }
 
     private List<String> tabStoredOwnerNames(String input) {
         String prefix = input == null ? "" : input.toLowerCase(Locale.ROOT);
+        List<String> names = new ArrayList<>();
 
-        return getStoredOwners().stream()
-                .map(owner -> owner.name)
-                .filter(name -> name != null && !name.isBlank())
-                .distinct()
-                .filter(name -> name.toLowerCase(Locale.ROOT).startsWith(prefix))
-                .sorted(String.CASE_INSENSITIVE_ORDER)
-                .limit(50)
-                .collect(Collectors.toList());
+        for (String name : getStoredOwnerNamesByUuid().values()) {
+            if (name == null || name.isBlank()) {
+                continue;
+            }
+
+            boolean duplicate = false;
+            for (String existing : names) {
+                if (existing.equalsIgnoreCase(name)) {
+                    duplicate = true;
+                    break;
+                }
+            }
+
+            if (!duplicate && name.toLowerCase(Locale.ROOT).startsWith(prefix)) {
+                names.add(name);
+            }
+        }
+
+        names.sort(String.CASE_INSENSITIVE_ORDER);
+
+        if (names.size() > 50) {
+            return new ArrayList<>(names.subList(0, 50));
+        }
+
+        return names;
     }
 
     private List<String> tabOptions(String input, Collection<String> options) {
         String prefix = input == null ? "" : input.toLowerCase(Locale.ROOT);
+        List<String> result = new ArrayList<>();
 
-        return options.stream()
-                .filter(option -> option != null && option.toLowerCase(Locale.ROOT).startsWith(prefix))
-                .sorted(String.CASE_INSENSITIVE_ORDER)
-                .collect(Collectors.toList());
+        for (String option : options) {
+            if (option != null && option.toLowerCase(Locale.ROOT).startsWith(prefix)) {
+                result.add(option);
+            }
+        }
+
+        result.sort(String.CASE_INSENSITIVE_ORDER);
+        return result;
+    }
+
+    private List<String> tabGraveIds(String input) {
+        String prefix = input == null ? "" : input.toLowerCase(Locale.ROOT);
+        List<String> ids = new ArrayList<>();
+
+        for (Grave grave : getAllGravesSafe()) {
+            if (grave == null || grave.getId() == null) {
+                continue;
+            }
+
+            String id = grave.getId().toString();
+            if (id.toLowerCase(Locale.ROOT).startsWith(prefix)) {
+                ids.add(id);
+            }
+        }
+
+        ids.sort(String.CASE_INSENSITIVE_ORDER);
+
+        if (ids.size() > 50) {
+            return new ArrayList<>(ids.subList(0, 50));
+        }
+
+        return ids;
+    }
+
+    private Grave findGraveById(UUID graveId) {
+        if (graveId == null) {
+            return null;
+        }
+
+        for (Grave grave : getAllGravesSafe()) {
+            if (grave != null && graveId.equals(grave.getId())) {
+                return grave;
+            }
+        }
+
+        return null;
     }
 
     @Override
@@ -238,10 +317,7 @@ public class GraveReloadCommand implements CommandExecutor, TabCompleter {
                     return true;
                 }
 
-                Grave g = plugin.getGraveStorage().getAll().stream()
-                        .filter(x -> x != null && x.getId().equals(graveId))
-                        .findFirst()
-                        .orElse(null);
+                Grave g = findGraveById(graveId);
 
                 if (g == null) {
                     plugin.getMessages().send(p, "emergency.noGraveFound");
@@ -280,14 +356,14 @@ public class GraveReloadCommand implements CommandExecutor, TabCompleter {
                             return true;
                         }
 
-                        Optional<StoredGraveOwner> owner = resolveStoredOwner(args[1]);
-                        if (owner.isEmpty()) {
+                        UUID ownerUuid = resolveStoredOwnerUuid(args[1]);
+                        if (ownerUuid == null) {
                             this.plugin.getMessages().send(p, "list.noOther", Map.of("player", args[1]));
                             return true;
                         }
 
-                        targetUuid = owner.get().uuid;
-                        targetName = owner.get().name;
+                        targetUuid = ownerUuid;
+                        targetName = getStoredOwnerName(ownerUuid);
                     }
                 } else if (args.length == 3) {
                     if (!isAdmin) {
@@ -295,14 +371,14 @@ public class GraveReloadCommand implements CommandExecutor, TabCompleter {
                         return true;
                     }
 
-                    Optional<StoredGraveOwner> owner = resolveStoredOwner(args[1]);
-                    if (owner.isEmpty()) {
+                    UUID ownerUuid = resolveStoredOwnerUuid(args[1]);
+                    if (ownerUuid == null) {
                         this.plugin.getMessages().send(p, "list.noOther", Map.of("player", args[1]));
                         return true;
                     }
 
-                    targetUuid = owner.get().uuid;
-                    targetName = owner.get().name;
+                    targetUuid = ownerUuid;
+                    targetName = getStoredOwnerName(ownerUuid);
 
                     Integer maybePage = tryParseInt(args[2]);
                     if (maybePage == null) {
@@ -402,23 +478,22 @@ public class GraveReloadCommand implements CommandExecutor, TabCompleter {
                     return true;
                 }
 
-                Optional<StoredGraveOwner> owner = resolveStoredOwner(args[1]);
-                if (owner.isEmpty()) {
+                UUID ownerUuid = resolveStoredOwnerUuid(args[1]);
+                if (ownerUuid == null) {
                     this.plugin.getMessages().send(p, "emergency.noGraveFound", Map.of("player", args[1]));
                     return true;
                 }
 
-                Grave newest = getGravesOf(owner.get().uuid).stream()
-                        .max(Comparator.comparingLong(Grave::getCreatedAtEpochMs))
-                        .orElse(null);
+                List<Grave> graves = getGravesOf(ownerUuid);
+                Grave newest = graves.isEmpty() ? null : graves.get(0);
 
                 if (newest == null) {
-                    this.plugin.getMessages().send(p, "emergency.noGraveFound", Map.of("player", owner.get().name));
+                    this.plugin.getMessages().send(p, "emergency.noGraveFound", Map.of("player", getStoredOwnerName(ownerUuid)));
                     return true;
                 }
 
                 this.plugin.getGraveManager().emergencyOpenAsNonOwner(p, newest);
-                this.plugin.getMessages().send(p, "emergency.done", Map.of("player", owner.get().name));
+                this.plugin.getMessages().send(p, "emergency.done", Map.of("player", getStoredOwnerName(ownerUuid)));
                 return true;
             }
 
@@ -524,14 +599,7 @@ public class GraveReloadCommand implements CommandExecutor, TabCompleter {
                     return Collections.emptyList();
                 }
 
-                String prefix = args[1].toLowerCase(Locale.ROOT);
-                return this.plugin.getGraveStorage().getAll().stream()
-                        .filter(g -> g != null && g.getId() != null)
-                        .map(g -> g.getId().toString())
-                        .filter(id -> id.toLowerCase(Locale.ROOT).startsWith(prefix))
-                        .sorted(String.CASE_INSENSITIVE_ORDER)
-                        .limit(50)
-                        .collect(Collectors.toList());
+                return tabGraveIds(args[1]);
             }
         }
 
@@ -542,15 +610,5 @@ public class GraveReloadCommand implements CommandExecutor, TabCompleter {
         }
 
         return Collections.emptyList();
-    }
-
-    private static final class StoredGraveOwner {
-        private final UUID uuid;
-        private final String name;
-
-        private StoredGraveOwner(UUID uuid, String name) {
-            this.uuid = uuid;
-            this.name = name;
-        }
     }
 }

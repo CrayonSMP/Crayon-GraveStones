@@ -104,6 +104,8 @@ public final class LocatorBarManager implements Listener {
     private boolean graveMarkerCancelTeleport;
     private boolean graveMarkerRespawnIfKilled;
     private String graveViewAllPermission;
+    private boolean graveStrictVisibility;
+    private double gravePrivacySafetyMargin;
 
     private boolean playerWaypointsEnabled;
     private PlayerColorMode playerColorMode;
@@ -148,6 +150,8 @@ public final class LocatorBarManager implements Listener {
         graveGlowWhenNear = graves == null || graves.getBoolean("glowWhenNear", true);
         graveUpdateIntervalTicks = clampLong(graves == null ? 40L : graves.getLong("updateIntervalTicks", 40L), 20L, 20L * 60L * 5L);
         graveViewAllPermission = graves == null ? "graves.admin" : graves.getString("viewAllPermission", "graves.admin");
+        graveStrictVisibility = graves == null || graves.getBoolean("strictVisibility", true);
+        gravePrivacySafetyMargin = clampDouble(graves == null ? 1.0D : graves.getDouble("privacySafetyMargin", 1.0D), 0.0D, 16.0D);
 
         ConfigurationSection markerProtection = graves == null ? null : graves.getConfigurationSection("markerProtection");
         graveMarkerProtectionEnabled = markerProtection == null || markerProtection.getBoolean("enabled", true);
@@ -273,6 +277,7 @@ public final class LocatorBarManager implements Listener {
         }
 
         updateWaypointVisibilityForPlayer(player);
+        updateAllGraveTransmitRanges();
     }
 
     private void runSync(Runnable task) {
@@ -548,7 +553,7 @@ public final class LocatorBarManager implements Listener {
                 grave.getId().toString()
         );
 
-        setWaypointTransmitRange(stand, graveTransmitRange, graveSelector(grave));
+        updateGraveTransmitRange(stand, grave);
     }
 
     private Location getWaypointLocation(Grave grave, World world) {
@@ -687,6 +692,10 @@ public final class LocatorBarManager implements Listener {
                 continue;
             }
 
+            if (!canPlayerSeeGrave(player, grave)) {
+                continue;
+            }
+
             if (player.getLocation().distanceSquared(graveLocation) <= maxDistanceSquared) {
                 return true;
             }
@@ -707,6 +716,60 @@ public final class LocatorBarManager implements Listener {
 
         return player.hasPermission(graveViewAllPermission)
                 && adminsViewingAllGraves.contains(player.getUniqueId());
+    }
+
+    private void updateGraveTransmitRange(ArmorStand stand, Grave grave) {
+        if (stand == null || grave == null) {
+            return;
+        }
+
+        double range = calculateGraveTransmitRange(grave);
+        setWaypointTransmitRange(stand, range, graveSelector(grave));
+    }
+
+    private double calculateGraveTransmitRange(Grave grave) {
+        if (!graveStrictVisibility) {
+            return graveTransmitRange;
+        }
+
+        World world = Bukkit.getWorld(grave.getWorldUuid());
+        if (world == null) {
+            return 0.0D;
+        }
+
+        Location graveLocation = new Location(
+                world,
+                grave.getX() + 0.5D,
+                grave.getY() + 0.5D,
+                grave.getZ() + 0.5D
+        );
+
+        boolean hasAllowedViewerInRange = false;
+
+        for (Player player : world.getPlayers()) {
+            if (player == null || !player.isOnline() || player.isDead()) {
+                continue;
+            }
+
+            double distanceSquared = player.getLocation().distanceSquared(graveLocation);
+            double maxRangeSquared = graveTransmitRange * graveTransmitRange;
+
+            if (distanceSquared > maxRangeSquared) {
+                continue;
+            }
+
+            if (!canPlayerSeeGrave(player, grave)) {
+                return 0.0D;
+            }
+
+            hasAllowedViewerInRange = true;
+        }
+
+        if (!hasAllowedViewerInRange) {
+            return 0.0D;
+        }
+
+        return graveTransmitRange;
     }
 
     private void applyVisibilityToGraveEntity(Grave grave, Entity entity) {
@@ -751,6 +814,24 @@ public final class LocatorBarManager implements Listener {
             Entity display = displayId == null ? null : Bukkit.getEntity(displayId);
             if (display != null) {
                 applyVisibilityToGraveEntity(player, grave, display);
+            }
+        }
+    }
+
+    private void updateAllGraveTransmitRanges() {
+        if (!enabled || !graveWaypointsEnabled || plugin.getGraveStorage() == null) {
+            return;
+        }
+
+        for (Grave grave : plugin.getGraveStorage().getAll()) {
+            World world = Bukkit.getWorld(grave.getWorldUuid());
+            if (world == null || !world.isChunkLoaded(grave.getX() >> 4, grave.getZ() >> 4)) {
+                continue;
+            }
+
+            ArmorStand stand = findWaypointStand(grave, world);
+            if (stand != null) {
+                updateGraveTransmitRange(stand, grave);
             }
         }
     }
@@ -1108,7 +1189,10 @@ public final class LocatorBarManager implements Listener {
         if (enabled && graveWaypointsEnabled) {
             Bukkit.getScheduler().runTaskLater(
                     (Plugin) plugin,
-                    () -> updateWaypointVisibilityForPlayer(event.getPlayer()),
+                    () -> {
+                        updateWaypointVisibilityForPlayer(event.getPlayer());
+                        updateAllGraveTransmitRanges();
+                    },
                     20L
             );
         }
@@ -1127,7 +1211,10 @@ public final class LocatorBarManager implements Listener {
         if (enabled && graveWaypointsEnabled) {
             Bukkit.getScheduler().runTaskLater(
                     (Plugin) plugin,
-                    () -> updateWaypointVisibilityForPlayer(event.getPlayer()),
+                    () -> {
+                        updateWaypointVisibilityForPlayer(event.getPlayer());
+                        updateAllGraveTransmitRanges();
+                    },
                     10L
             );
         }

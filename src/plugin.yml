@@ -1,6 +1,6 @@
 name: better-GraveStones
 main: at.slini204.bgravestones.GravePlugin
-version: 2.7.0
+version: 2.7.2
 api-version: "1.21"
 authors: [ "SLINIcraftet204" ]
 description: Gravestones with configurable loot/ownership rules.

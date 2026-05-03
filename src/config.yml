@@ -156,13 +156,16 @@ locatorBar:
     # so the plugin switches the waypoint color and optionally enables entity glow.
     nearColor: "gold"
     # How far the marker entity transmits its waypoint.
-    transmitRange: 10000
+    transmitRange: 256
     # If at least one player is this close, nearColor is applied and glowWhenNear can activate.
     nearGlowDistance: 24
     # Enables the vanilla glowing outline on the hidden marker entity while near.
     glowWhenNear: true
     # How often near/far state is checked and marker armor stands are repaired. 40 ticks = 2 seconds.
     updateIntervalTicks: 40
+    # Important: true prevents, that a normal Player can see other Gravestone-Markers.
+    strictVisibility: true
+    privacySafetyMargin: 1.0
 
     # Normal players only can see own Waypoints.
     # Admins can toggle to see all Waypoints from all players on the server with  /graves locatorall <on|off|toggle>
