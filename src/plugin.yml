@@ -1,12 +1,12 @@
-name: Better-GraveStones
-main: at.slini.crayonsmp.graves.GravePlugin
-version: 2.6.5
+name: better-GraveStones
+main: at.slini204.bgravestones.GravePlugin
+version: 2.7.0
 api-version: "1.21"
 authors: [ "SLINIcraftet204" ]
 description: Gravestones with configurable loot/ownership rules.
 commands:
   graves:
-    description: Crayon-GraveStones commands.
+    description: bGraveStones commands.
     usage: /graves <reload|list>
     permission: graves.use
 permissions:

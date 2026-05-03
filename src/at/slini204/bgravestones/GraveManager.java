@@ -1,7 +1,7 @@
-package at.slini.crayonsmp.graves;
+package at.slini204.bgravestones;
 
-import at.slini.crayonsmp.graves.model.Grave;
-import at.slini.crayonsmp.graves.storage.IGraveStorage;
+import at.slini204.bgravestones.model.Grave;
+import at.slini204.bgravestones.storage.IGraveStorage;
 
 import java.time.Instant;
 import java.time.ZoneId;
@@ -41,8 +41,6 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.plugin.Plugin;
-import org.bukkit.util.Transformation;
-import org.joml.Vector3f;
 
 public class GraveManager {
 
@@ -346,6 +344,10 @@ public class GraveManager {
 
         this.storage.saveAsync();
 
+        if (this.plugin.getLocatorBarManager() != null) {
+            this.plugin.getLocatorBarManager().syncGraveWaypoint(grave);
+        }
+
         this.plugin.getMessages().send(owner, "grave.created", Map.of("x", String.valueOf(grave.getX()), "y", String.valueOf(grave.getY()), "z", String.valueOf(grave.getZ()), "world", placeAt.getWorld().getName()));
 
         return Optional.of(grave);
@@ -643,6 +645,12 @@ public class GraveManager {
         return false;
     }
 
+    public boolean isGraveVisualEntity(UUID entityId) {
+        if (isGraveHologram(entityId)) return true;
+        return this.plugin.getLocatorBarManager() != null
+                && this.plugin.getLocatorBarManager().isManagedWaypointEntity(entityId);
+    }
+
     public void removeGrave(Grave grave, UUID removerUuid) {
         if (grave == null) return;
         World w = Bukkit.getWorld(grave.getWorldUuid());
@@ -654,6 +662,10 @@ public class GraveManager {
         }
         if (grave.getHologramEntityId() != null) {
             removeHologramEntity(grave);
+        }
+
+        if (this.plugin.getLocatorBarManager() != null) {
+            this.plugin.getLocatorBarManager().removeGraveWaypoint(grave);
         }
 
         this.storage.remove(grave.getId());
@@ -671,13 +683,10 @@ public class GraveManager {
         World w = Bukkit.getWorld(grave.getWorldUuid());
         if (w == null) return null;
 
-        // In disabled worlds NICHT löschen/ersetzen – sonst verschwinden sie bei Reload/Restart.
-        // Einfach den aktuellen Wert zurückgeben (kann auch null sein, dann ist es halt so).
         if (isWorldDisabled(w)) {
             return grave.getHologramEntityId();
         }
 
-        // Nur in aktiven Welten entfernen und neu erstellen
         removeHologramEntity(grave);
 
         Location base = new Location(w, grave.getX(), grave.getY(), grave.getZ());
@@ -733,23 +742,51 @@ public class GraveManager {
         if (scale < 0.05F) scale = 0.05F;
         if (scale > 5.0F) scale = 5.0F;
         td.setLineWidth(Math.max(40, Math.min(300, (int) (200.0F / Math.max(0.25F, scale)))));
-        try {
-            Transformation t = td.getTransformation();
-            td.setTransformation(new Transformation(
-                    t.getTranslation(),
-                    t.getLeftRotation(),
-                    new Vector3f(scale, scale, scale),
-                    t.getRightRotation()
-            ));
-        } catch (Throwable ex) {
-            this.plugin.getLogger().warning("[bGraveStones] Could not apply hologramTextScale via Transformation API: " + ex.getMessage());
-        }
+        applyTextDisplayScale(td, scale);
         float boxScale = Math.max(0.25F, Math.min(2.0F, scale));
         td.setDisplayHeight(0.35F * boxScale);
         td.setDisplayWidth(0.9F * boxScale);
         td.setPersistent(true);
         td.setInvulnerable(true);
         return td.getUniqueId();
+    }
+
+    private void applyTextDisplayScale(TextDisplay textDisplay, float scale) {
+        try {
+            Class<?> transformationClass = Class.forName("org.bukkit.util.Transformation");
+            Class<?> vector3fClass = Class.forName("org.joml.Vector3f");
+            Class<?> quaternionfClass = Class.forName("org.joml.Quaternionf");
+
+            Object currentTransformation = textDisplay.getClass()
+                    .getMethod("getTransformation")
+                    .invoke(textDisplay);
+
+            Object translation = transformationClass
+                    .getMethod("getTranslation")
+                    .invoke(currentTransformation);
+
+            Object leftRotation = transformationClass
+                    .getMethod("getLeftRotation")
+                    .invoke(currentTransformation);
+
+            Object rightRotation = transformationClass
+                    .getMethod("getRightRotation")
+                    .invoke(currentTransformation);
+
+            Object scaleVector = vector3fClass
+                    .getConstructor(float.class, float.class, float.class)
+                    .newInstance(scale, scale, scale);
+
+            Object newTransformation = transformationClass
+                    .getConstructor(vector3fClass, quaternionfClass, vector3fClass, quaternionfClass)
+                    .newInstance(translation, leftRotation, scaleVector, rightRotation);
+
+            textDisplay.getClass()
+                    .getMethod("setTransformation", transformationClass)
+                    .invoke(textDisplay, newTransformation);
+        } catch (ReflectiveOperationException | LinkageError ex) {
+            this.plugin.getLogger().warning("[bGraveStones] Could not apply hologramTextScale via Transformation API: " + ex.getMessage());
+        }
     }
 
     public void bootstrapVisuals() {

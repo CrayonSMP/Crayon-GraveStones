@@ -1,11 +1,11 @@
-package at.slini.crayonsmp.graves.model;
+package at.slini204.bgravestones.model;
+
+import org.bukkit.inventory.ItemStack;
 
 import java.util.Map;
 import java.util.UUID;
 
-import org.bukkit.inventory.ItemStack;
-
-public class Grave {
+public final class Grave {
     private final UUID id;
     private final UUID ownerUuid;
     private final String ownerName;
@@ -18,7 +18,9 @@ public class Grave {
     private final Map<Integer, ItemStack> slotItems;
     private final ItemStack[] armor;
     private final ItemStack offHand;
+
     private UUID hologramEntityId;
+    private UUID waypointEntityId;
 
     public Grave(UUID id, UUID ownerUuid, String ownerName, UUID worldUuid, int x, int y, int z, long createdAtEpochMs, int totalExp, Map<Integer, ItemStack> slotItems, ItemStack[] armor, ItemStack offHand) {
         this.id = id;
@@ -36,58 +38,66 @@ public class Grave {
     }
 
     public UUID getId() {
-        return this.id;
+        return id;
     }
 
     public UUID getOwnerUuid() {
-        return this.ownerUuid;
+        return ownerUuid;
     }
 
     public String getOwnerName() {
-        return this.ownerName;
+        return ownerName;
     }
 
     public UUID getWorldUuid() {
-        return this.worldUuid;
+        return worldUuid;
     }
 
     public int getX() {
-        return this.x;
+        return x;
     }
 
     public int getY() {
-        return this.y;
+        return y;
     }
 
     public int getZ() {
-        return this.z;
+        return z;
     }
 
     public long getCreatedAtEpochMs() {
-        return this.createdAtEpochMs;
+        return createdAtEpochMs;
     }
 
     public int getTotalExp() {
-        return this.totalExp;
+        return totalExp;
     }
 
     public Map<Integer, ItemStack> getSlotItems() {
-        return this.slotItems;
+        return slotItems;
     }
 
     public ItemStack[] getArmor() {
-        return this.armor;
+        return armor;
     }
 
     public ItemStack getOffHand() {
-        return this.offHand;
+        return offHand;
     }
 
     public UUID getHologramEntityId() {
-        return this.hologramEntityId;
+        return hologramEntityId;
     }
 
     public void setHologramEntityId(UUID hologramEntityId) {
         this.hologramEntityId = hologramEntityId;
+    }
+
+    public UUID getWaypointEntityId() {
+        return waypointEntityId;
+    }
+
+    public void setWaypointEntityId(UUID waypointEntityId) {
+        this.waypointEntityId = waypointEntityId;
     }
 }

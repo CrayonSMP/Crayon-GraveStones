@@ -1,4 +1,4 @@
-package at.slini.crayonsmp.graves.model;
+package at.slini204.bgravestones.model;
 
 import org.bukkit.inventory.ItemStack;
 

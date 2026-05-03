@@ -6,10 +6,19 @@ port: 3306
 database: "database"
 username: "user"
 password: "password"
-usetablePrefix: false
-tablePrefix: "crayon_"
+useTablePrefix: false
+# Legacy spelling is still accepted by the plugin: usetablePrefix
+tablePrefix: "bgstones_"
 useSSL: false
 
-# !!Not implemented yet!!
-# Optional JDBC parameters (no leading '?')
-parameters: "useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC"
+# Optional JDBC parameters without leading '?' or '&'.
+# Existing defaults already add: useUnicode, characterEncoding, useSSL, serverTimezone, tcpKeepAlive, connectTimeout, socketTimeout.
+parameters: "allowPublicKeyRetrieval=true"
+
+# Prevent idle database connections from being killed silently by the DB server.
+# The plugin still validates and reconnects before every SQL operation, even if keepalive is disabled.
+keepAlive:
+  enabled: true
+  # Must be lower than your MySQL wait_timeout. 240s is safe for most setups.
+  intervalSeconds: 240
+  validationTimeoutSeconds: 3

@@ -1,4 +1,4 @@
-package at.slini.crayonsmp.graves;
+package at.slini204.bgravestones;
 
 import java.io.File;
 import java.util.Map;

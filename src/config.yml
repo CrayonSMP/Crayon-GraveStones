@@ -76,7 +76,7 @@ listPageSize: 10
 graveTeleportPermission: "graves.admin.tp"
 
 # player, that are allowed to use the emergency command, if you want to add more players to this list you'll separate them by a comma e.g. ["TamashiiMon", "SLINIcraftet204"]
-emergencyPlayers: ["TamashiiMon"]
+emergencyPlayers: ["SLINIcraftet204"]
 
 # Change the Sounds for opening a gravestone and if a gravestone is looted successfully or if someone is not allowed to open other graves (applies if isOwner=true)
 sounds:
@@ -97,3 +97,83 @@ sounds:
     sound: BLOCK_NOTE_BLOCK_BASS
     volume: 1.0
     pitch: 0.6
+
+# Debug logging. Keep disabled on production unless you are actively investigating issues.
+debug:
+  mysql: false
+  migration: false
+  sql: false
+
+# Minecraft 1.21.6+ Locator-Bar integration.
+# This version uses only waypoint colors. No resource-pack textures/styles are required.
+# Colors can be vanilla names like gray/gold/aqua or hex values like #55FFFF.
+locatorBar:
+  enabled: false
+  # If true, the plugin sets gamerule locatorBar=true for all loaded worlds on enable/reload.
+  forceGamerule: true
+  commands:
+    # true = Vanilla-/Waypoint-Command-Outputs will be suppressed
+    # false = you will see the print "Waypoint color is now ..." console
+    silent: true
+
+    # true = Plugin is logging all of its own set of commands
+    debug: false
+
+  players:
+    enabled: false
+    # vanilla = leave player waypoint colors untouched
+    # fixed = use defaultColor for all players
+    # uuid_hash = calculate a stable color from each player's UUID.
+    # This mode uses only player-safe colors and never gray/gold/yellow/dark_gray.
+    colorMode: "uuid_hash"
+    # Used only when colorMode is uuid_hash:
+    # solid = one stable safe color per player
+    # gradient = animated hex color gradient per player, without gray/gold/yellow tones
+    uuidHashStyle: "gradient"
+    uuidGradient:
+      # How often the animated gradient changes color. 20 ticks = 1 second.
+      intervalTicks: 20
+      # More steps = smoother transition, but it takes longer to complete one full color cycle.
+      steps: 32
+    # Used only when colorMode is fixed. Leave empty to keep vanilla/random/team color.
+    # gray/gold/yellow/dark_gray are reserved for graves and are ignored for player colors.
+    defaultColor: ""
+    # 0 = leave vanilla/default transmit range untouched.
+    transmitRange: 0
+    # Re-apply color sometimes because other plugins or commands may overwrite waypoint settings.
+    # If uuidHashStyle=gradient is active, uuidGradient.intervalTicks is used instead.
+    reapplyIntervalTicks: 600
+    # Keys can be player names or UUIDs. Values must be color names or hex values.
+    # gray/gold/yellow/dark_gray are reserved for graves and are ignored here.
+    perPlayerColors: {}
+
+  graves:
+    enabled: false
+    # Normal grave waypoint color.
+    color: "gray"
+    # Color while at least one player is near the grave.
+    # A real separate golden border is not available without a resource-pack style,
+    # so the plugin switches the waypoint color and optionally enables entity glow.
+    nearColor: "gold"
+    # How far the marker entity transmits its waypoint.
+    transmitRange: 10000
+    # If at least one player is this close, nearColor is applied and glowWhenNear can activate.
+    nearGlowDistance: 24
+    # Enables the vanilla glowing outline on the hidden marker entity while near.
+    glowWhenNear: true
+    # How often near/far state is checked and marker armor stands are repaired. 40 ticks = 2 seconds.
+    updateIntervalTicks: 40
+
+    # Normal players only can see own Waypoints.
+    # Admins can toggle to see all Waypoints from all players on the server with  /graves locatorall <on|off|toggle>
+    viewAllPermission: "graves.admin"
+
+    markerProtection:
+      # Protects the hidden armor stand used as the grave locator marker.
+      enabled: true
+      # Keeps the marker fixed at the grave position and repairs gravity/fire/visibility/etc.
+      lockPosition: true
+      # Cancels external teleports against the marker. Plugin-internal repair teleports are still allowed.
+      cancelTeleport: true
+      # If /kill @e or another command/plugin still manages to kill/remove the marker, recreate it automatically.
+      respawnIfKilled: true

@@ -18,9 +18,6 @@
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
     <orderEntry type="library" name="spigot-api-1.21.11-R0.1-SNAPSHOT" level="project" />
-    <orderEntry type="library" name="craft-engine-bukkit-0.0.66" level="project" />
-    <orderEntry type="library" name="craft-engine-core-0.0.66" level="project" />
-    <orderEntry type="library" name="joml-1.10.8" level="project" />
     <orderEntry type="library" name="BungeeCord" level="project" />
   </component>
 </module>

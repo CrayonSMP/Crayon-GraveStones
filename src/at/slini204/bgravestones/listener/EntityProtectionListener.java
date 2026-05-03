@@ -1,7 +1,6 @@
-package at.slini.crayonsmp.graves.listener;
+package at.slini204.bgravestones.listener;
 
-import at.slini.crayonsmp.graves.GraveManager;
-import org.bukkit.entity.ArmorStand;
+import at.slini204.bgravestones.GraveManager;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
@@ -16,10 +15,9 @@ public class EntityProtectionListener implements Listener {
     }
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
-    public void onDamage(EntityDamageEvent e) {
-        if (!(e.getEntity() instanceof ArmorStand as)) return;
-        if (graveManager.isGraveHologram(as.getUniqueId())) {
-            e.setCancelled(true);
+    public void onDamage(EntityDamageEvent event) {
+        if (graveManager.isGraveVisualEntity(event.getEntity().getUniqueId())) {
+            event.setCancelled(true);
         }
     }
 }

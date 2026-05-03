@@ -1,6 +1,6 @@
-package at.slini.crayonsmp.graves.listener;
+package at.slini204.bgravestones.listener;
 
-import at.slini.crayonsmp.graves.GraveManager;
+import at.slini204.bgravestones.GraveManager;
 import org.bukkit.entity.Item;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;

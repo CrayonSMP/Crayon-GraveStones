@@ -1,7 +1,7 @@
-package at.slini.crayonsmp.graves.storage;
+package at.slini204.bgravestones.storage;
 
-import at.slini.crayonsmp.graves.GravePlugin;
-import at.slini.crayonsmp.graves.model.Grave;
+import at.slini204.bgravestones.GravePlugin;
+import at.slini204.bgravestones.model.Grave;
 
 import java.io.File;
 import java.io.IOException;
@@ -12,7 +12,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -59,10 +58,6 @@ public class GraveStorage implements IGraveStorage {
 
         YamlConfiguration yml = YamlConfiguration.loadConfiguration(this.file);
         ConfigurationSection root = yml.getConfigurationSection("graves");
-
-        if (root == null) {
-            root = yml.getConfigurationSection("graves");
-        }
 
         if (root == null) {
             boolean looksLikeRootUuids = false;
@@ -180,6 +175,15 @@ public class GraveStorage implements IGraveStorage {
                     }
                 }
 
+                String waypoint = g.getString("waypointEntityId");
+                if (waypoint != null && !waypoint.isBlank()) {
+                    try {
+                        grave.setWaypointEntityId(UUID.fromString(waypoint));
+                    } catch (IllegalArgumentException ex) {
+                        this.plugin.getLogger().warning("Invalid waypointEntityId for grave " + key + ": " + waypoint);
+                    }
+                }
+
                 this.graves.put(id, grave);
 
             } catch (Exception ex) {
@@ -211,10 +215,11 @@ public class GraveStorage implements IGraveStorage {
             if (armor != null && armor.length > 0) {
                 g.set("armor", Arrays.asList(armor));
             } else {
-                g.set("armor", new ArrayList());
+                g.set("armor", new ArrayList<ItemStack>());
             }
             g.set("offHand", grave.getOffHand());
             if (grave.getHologramEntityId() != null) g.set("hologramEntityId", grave.getHologramEntityId().toString());
+            if (grave.getWaypointEntityId() != null) g.set("waypointEntityId", grave.getWaypointEntityId().toString());
         }
         try {
             yml.save(this.file);
