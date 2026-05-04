@@ -40,7 +40,7 @@ emergency:
   done: "&aEmergency opened the gravestone of &f{player}&a (&7{date}&a)."
 
 usage:
-  main: "&eUsage: /graves reload &7(Admin) &e| /graves list &7[(PlayerName) | Admin] &e| /graves tp <list-number> &7(Admin) &e| /graves emergency &7(Restricted)"
+  main: "&eUsage: /graves reload &7(Admin) &e| /graves list &7[(PlayerName) | Admin] &e| /graves tp <List-Number> &7(Admin) &e| /graves emergency &7(Emergency) &e| /graves locatorall <on|off|toggle> &7(Admin)"
 
 warnings:
   storageNearLimit:

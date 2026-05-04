@@ -99,6 +99,16 @@ public class GraveReloadCommand implements CommandExecutor, TabCompleter {
         return player != null && player.hasPermission(perm);
     }
 
+    private void sendLocatorAllState(Player player, boolean enabled) {
+        if (player == null) {
+            return;
+        }
+
+        player.sendMessage(ChatColor.translateAlternateColorCodes('&', enabled
+                ? "&8[&6bGraveStones&8] &aYou can now see all grave waypoints."
+                : "&8[&6bGraveStones&8] &7You can now only see your own grave waypoints."));
+    }
+
     private void sendPager(Player player, String targetName, boolean isSelf, int page, int pages) {
         String prevTxt = plugin.getMessages().format("nav.prev", Map.of());
         String nextTxt = plugin.getMessages().format("nav.next", Map.of());
@@ -587,6 +597,55 @@ public class GraveReloadCommand implements CommandExecutor, TabCompleter {
                 return true;
             }
 
+
+            case "locatorall":
+            case "waypointsall":
+            case "showall": {
+                if (!(sender instanceof Player player)) {
+                    plugin.getMessages().send(sender, "errors.onlyIngame");
+                    return true;
+                }
+
+                String permission = plugin.getConfig().getString("locatorBar.graves.viewAllPermission", "graves.admin");
+                if (!player.hasPermission(permission)) {
+                    plugin.getMessages().send(player, "errors.noPermission");
+                    return true;
+                }
+
+                if (plugin.getLocatorBarManager() == null) {
+                    player.sendMessage(ChatColor.translateAlternateColorCodes('&',
+                            "&8[&6bGraveStones&8] &cLocator-Bar support is not available right now."));
+                    return true;
+                }
+
+                boolean enabled;
+
+                if (args.length >= 2) {
+                    String value = args[1].toLowerCase(Locale.ROOT);
+
+                    if (value.equals("on") || value.equals("true") || value.equals("1") || value.equals("an")) {
+                        enabled = true;
+                    } else if (value.equals("off") || value.equals("false") || value.equals("0") || value.equals("aus")) {
+                        enabled = false;
+                    } else if (value.equals("toggle")) {
+                        enabled = plugin.getLocatorBarManager().toggleViewingAllGraves(player);
+                        sendLocatorAllState(player, enabled);
+                        return true;
+                    } else {
+                        player.sendMessage(ChatColor.translateAlternateColorCodes('&',
+                                "&8[&6bGraveStones&8] &cUse: /graves locatorall <on|off|toggle>"));
+                        return true;
+                    }
+
+                    plugin.getLocatorBarManager().setViewingAllGraves(player, enabled);
+                } else {
+                    enabled = plugin.getLocatorBarManager().toggleViewingAllGraves(player);
+                }
+
+                sendLocatorAllState(player, enabled);
+                return true;
+            }
+
             default: {
                 plugin.getMessages().send(sender, "usage.main");
                 return true;
@@ -604,6 +663,11 @@ public class GraveReloadCommand implements CommandExecutor, TabCompleter {
                 options.add("reload");
             }
 
+            String locatorAllPermission = plugin.getConfig().getString("locatorBar.graves.viewAllPermission", "graves.admin");
+            if (sender.hasPermission(locatorAllPermission)) {
+                options.add("locatorall");
+            }
+
             if (sender instanceof Player player) {
                 if (canTp(player)) {
                     options.add("tp");
@@ -619,6 +683,14 @@ public class GraveReloadCommand implements CommandExecutor, TabCompleter {
         String sub = args[0].toLowerCase(Locale.ROOT);
 
         if (args.length == 2) {
+            if ("locatorall".equals(sub) || "waypointsall".equals(sub) || "showall".equals(sub)) {
+                String permission = plugin.getConfig().getString("locatorBar.graves.viewAllPermission", "graves.admin");
+                if (sender.hasPermission(permission)) {
+                    return tabOptions(args[1], List.of("on", "off", "toggle"));
+                }
+                return Collections.emptyList();
+            }
+
             if ("list".equals(sub)) {
                 if (sender instanceof Player player && player.hasPermission("graves.admin")) {
                     List<String> result = tabStoredOwnerNames(args[1]);
