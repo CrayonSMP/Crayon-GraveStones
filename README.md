@@ -1,3 +1,19 @@
+<p align="center">
+  <img src="https://img.shields.io/github/v/release/SLINIcraftet204/bGraveStones?include_prereleases&label=release" alt="GitHub release">
+  <img src="https://github.com/SLINIcraftet204/bGraveStones/actions/workflows/build.yml/badge.svg" alt="Build status">
+  <img src="https://img.shields.io/badge/Minecraft-1.21.6%2B-brightgreen" alt="Minecraft 1.21.6+">
+  <img src="https://img.shields.io/badge/Server-Paper%20recommended-blue" alt="Paper recommended">
+  <img src="https://img.shields.io/badge/Java-21-orange" alt="Java 21">
+  <img src="https://img.shields.io/badge/Storage-YAML%20%7C%20MySQL-lightgrey" alt="YAML and MySQL storage">
+  <img src="https://img.shields.io/badge/License-All%20Rights%20Reserved-red" alt="All Rights Reserved">
+</p>
+
+<p align="center">
+  <a href="https://ko-fi.com/slinicraftet204">
+    <img src="https://img.shields.io/badge/Support-Ko--fi-ff5f5f?logo=kofi&logoColor=white" alt="Support on Ko-fi">
+  </a>
+</p>
+
 # betterGraveStones
 
 **betterGraveStones** is a configurable Minecraft server plugin for **Minecraft/Paper 1.21.6+** that creates protected graves when players die, allowing them to recover their dropped items and experience in a controlled and server-friendly way.
