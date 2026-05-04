@@ -1,7 +1,7 @@
 <p align="center">
   <img src="https://img.shields.io/github/v/release/SLINIcraftet204/bGraveStones?include_prereleases&label=release" alt="GitHub release">
   <img src="https://github.com/SLINIcraftet204/bGraveStones/actions/workflows/build.yml/badge.svg" alt="Build status">
-  <img src="https://img.shields.io/badge/Minecraft-1.21.6%2B-brightgreen" alt="Minecraft 1.21.6+">
+  <img src="https://img.shields.io/badge/focus%20MC%20Version-1.21.6%2B-brightgreen" alt="focus MC Version 1.21.6+">
   <img src="https://img.shields.io/badge/Server-Paper%20recommended-blue" alt="Paper recommended">
   <img src="https://img.shields.io/badge/Java-21-orange" alt="Java 21">
   <img src="https://img.shields.io/badge/Storage-YAML%20%7C%20MySQL-lightgrey" alt="YAML and MySQL storage">
