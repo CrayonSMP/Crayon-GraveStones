@@ -15,7 +15,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 
 import org.bukkit.Location;
 import org.bukkit.World;
@@ -35,7 +34,6 @@ import net.md_5.bungee.api.chat.hover.content.Text;
 
 public class GraveReloadCommand implements CommandExecutor, TabCompleter {
     private final GravePlugin plugin;
-    private final Map<UUID, Map<Integer, UUID>> lastListedGravesByViewer = new ConcurrentHashMap<>();
 
     public GraveReloadCommand(GravePlugin plugin) {
         this.plugin = plugin;
@@ -237,6 +235,48 @@ public class GraveReloadCommand implements CommandExecutor, TabCompleter {
         return result;
     }
 
+    private int getListPageSize() {
+        int pageSize = plugin.getConfig().getInt("listPageSize", 10);
+        return pageSize <= 0 ? 10 : pageSize;
+    }
+
+    private int getPageCountFor(UUID ownerUuid) {
+        if (ownerUuid == null) {
+            return 0;
+        }
+
+        List<Grave> graves = getGravesOf(ownerUuid);
+        if (graves.isEmpty()) {
+            return 0;
+        }
+
+        return (int) Math.ceil(graves.size() / (double) getListPageSize());
+    }
+
+    private List<String> tabListPages(UUID ownerUuid, String input) {
+        int pages = getPageCountFor(ownerUuid);
+
+        /*
+         * Do not suggest useless "1" when there is only one page.
+         * Page tab-completion should only appear when it actually helps.
+         */
+        if (pages <= 1) {
+            return Collections.emptyList();
+        }
+
+        String prefix = input == null ? "" : input.toLowerCase(Locale.ROOT);
+        List<String> result = new ArrayList<>();
+
+        for (int page = 1; page <= pages; page++) {
+            String value = String.valueOf(page);
+            if (value.startsWith(prefix)) {
+                result.add(value);
+            }
+        }
+
+        return result.size() > 50 ? new ArrayList<>(result.subList(0, 50)) : result;
+    }
+
     private Grave findGraveById(UUID graveId) {
         if (graveId == null) {
             return null;
@@ -251,48 +291,34 @@ public class GraveReloadCommand implements CommandExecutor, TabCompleter {
         return null;
     }
 
-    private Grave resolveTeleportTarget(Player player, String input) {
-        if (player == null || input == null || input.isBlank()) {
+    private Grave resolveTeleportTarget(Player player, String ownerInput, String numberInput) {
+        if (player == null || ownerInput == null || ownerInput.isBlank() || numberInput == null || numberInput.isBlank()) {
             return null;
         }
 
-        Integer listIndex = tryParseInt(input);
-        if (listIndex != null) {
-            Map<Integer, UUID> lastList = lastListedGravesByViewer.get(player.getUniqueId());
-            if (lastList == null || lastList.isEmpty()) {
-                return null;
-            }
-
-            UUID graveId = lastList.get(listIndex);
-            return graveId == null ? null : findGraveById(graveId);
-        }
-
-        try {
-            return findGraveById(UUID.fromString(input));
-        } catch (IllegalArgumentException ignored) {
+        Integer graveNumber = tryParseInt(numberInput);
+        if (graveNumber == null || graveNumber < 1) {
             return null;
         }
+
+        UUID ownerUuid = resolveStoredOwnerUuid(ownerInput);
+        if (ownerUuid == null) {
+            return null;
+        }
+
+        if (!ownerUuid.equals(player.getUniqueId()) && !player.hasPermission("graves.admin")) {
+            return null;
+        }
+
+        List<Grave> graves = getGravesOf(ownerUuid);
+        if (graveNumber > graves.size()) {
+            return null;
+        }
+
+        return graves.get(graveNumber - 1);
     }
 
-    private void rememberListedGraves(Player viewer, List<Grave> graves) {
-        if (viewer == null || graves == null) {
-            return;
-        }
 
-        Map<Integer, UUID> entries = new LinkedHashMap<>();
-        for (int i = 0; i < graves.size(); i++) {
-            Grave grave = graves.get(i);
-            if (grave != null && grave.getId() != null) {
-                entries.put(i + 1, grave.getId());
-            }
-        }
-
-        if (entries.isEmpty()) {
-            lastListedGravesByViewer.remove(viewer.getUniqueId());
-        } else {
-            lastListedGravesByViewer.put(viewer.getUniqueId(), entries);
-        }
-    }
 
     private List<String> tabOptions(String input, Collection<String> options) {
         String prefix = input == null ? "" : input.toLowerCase(Locale.ROOT);
@@ -334,25 +360,32 @@ public class GraveReloadCommand implements CommandExecutor, TabCompleter {
         return names.size() > 50 ? new ArrayList<>(names.subList(0, 50)) : names;
     }
 
-    private List<String> tabLastListedIndexes(Player player, String input) {
-        if (player == null) {
+    private List<String> tabTeleportIndexes(Player player, String ownerInput, String input) {
+        if (player == null || ownerInput == null || ownerInput.isBlank()) {
+            return Collections.emptyList();
+        }
+
+        UUID ownerUuid = resolveStoredOwnerUuid(ownerInput);
+        if (ownerUuid == null) {
+            return Collections.emptyList();
+        }
+
+        if (!ownerUuid.equals(player.getUniqueId()) && !player.hasPermission("graves.admin")) {
             return Collections.emptyList();
         }
 
         String prefix = input == null ? "" : input.toLowerCase(Locale.ROOT);
-        Map<Integer, UUID> entries = lastListedGravesByViewer.get(player.getUniqueId());
-        if (entries == null || entries.isEmpty()) {
-            return Collections.emptyList();
-        }
-
+        List<Grave> graves = getGravesOf(ownerUuid);
         List<String> result = new ArrayList<>();
-        for (Integer index : entries.keySet()) {
-            String value = String.valueOf(index);
+
+        for (int i = 0; i < graves.size(); i++) {
+            String value = String.valueOf(i + 1);
             if (value.startsWith(prefix)) {
                 result.add(value);
             }
         }
-        return result;
+
+        return result.size() > 50 ? new ArrayList<>(result.subList(0, 50)) : result;
     }
 
     @Override
@@ -374,8 +407,6 @@ public class GraveReloadCommand implements CommandExecutor, TabCompleter {
                 plugin.reloadPlugin();
                 plugin.getGraveManager().restoreMissingGraveBlocks();
                 plugin.getGraveManager().refreshAllHolograms();
-                lastListedGravesByViewer.clear();
-
                 plugin.getMessages().send(sender, "reload.done");
                 return true;
             }
@@ -391,12 +422,12 @@ public class GraveReloadCommand implements CommandExecutor, TabCompleter {
                     return true;
                 }
 
-                if (args.length != 2) {
+                if (args.length != 3) {
                     plugin.getMessages().send(player, "tp.usage");
                     return true;
                 }
 
-                Grave grave = resolveTeleportTarget(player, args[1]);
+                Grave grave = resolveTeleportTarget(player, args[1], args[2]);
                 if (grave == null) {
                     plugin.getMessages().send(player, "tp.notFound");
                     return true;
@@ -411,7 +442,7 @@ public class GraveReloadCommand implements CommandExecutor, TabCompleter {
                 Location loc = new Location(world, grave.getX() + 0.5D, grave.getY() + 1.0D, grave.getZ() + 0.5D);
                 player.teleport(loc);
                 plugin.getMessages().send(player, "tp.done", Map.of(
-                        "index", args[1],
+                        "index", args[2],
                         "player", normalizeOwnerName(grave),
                         "date", formatGraveDate(grave)
                 ));
@@ -478,7 +509,6 @@ public class GraveReloadCommand implements CommandExecutor, TabCompleter {
                 List<Grave> all = getGravesOf(targetUuid);
 
                 if (all.isEmpty()) {
-                    lastListedGravesByViewer.remove(player.getUniqueId());
                     if (isSelf) {
                         plugin.getMessages().send(player, "list.noSelf");
                     } else {
@@ -487,10 +517,7 @@ public class GraveReloadCommand implements CommandExecutor, TabCompleter {
                     return true;
                 }
 
-                rememberListedGraves(player, all);
-
-                int pageSize = plugin.getConfig().getInt("listPageSize", 10);
-                if (pageSize <= 0) pageSize = 10;
+                int pageSize = getListPageSize();
 
                 int pages = (int) Math.ceil(all.size() / (double) pageSize);
                 page = clamp(page, 1, Math.max(1, pages));
@@ -538,7 +565,7 @@ public class GraveReloadCommand implements CommandExecutor, TabCompleter {
                     TextComponent line = tc(entryLegacy);
 
                     if (tpAllowed) {
-                        line.setClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/graves tp " + displayIndex));
+                        line.setClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/graves tp " + targetName + " " + displayIndex));
                         String hover = plugin.getMessages().format("list.hoverTeleport", Map.of(
                                 "index", String.valueOf(displayIndex),
                                 "player", normalizeOwnerName(grave),
@@ -692,26 +719,58 @@ public class GraveReloadCommand implements CommandExecutor, TabCompleter {
             }
 
             if ("list".equals(sub)) {
-                if (sender instanceof Player player && player.hasPermission("graves.admin")) {
-                    List<String> result = tabStoredOwnerNames(args[1]);
-                    result.addAll(tabOptions(args[1], List.of("1", "2", "3", "4", "5")));
-                    return result;
+                if (!(sender instanceof Player player)) {
+                    return Collections.emptyList();
                 }
-                return tabOptions(args[1], List.of("1", "2", "3", "4", "5"));
+
+                /*
+                 * Normal players: /graves list <page>
+                 * Only suggest page numbers if their own grave list has more than one page.
+                 */
+                if (!player.hasPermission("graves.admin")) {
+                    return tabListPages(player.getUniqueId(), args[1]);
+                }
+
+                /*
+                 * Admins: /graves list <PlayerName> <page>
+                 * At this position only player names are suggested.
+                 */
+                return tabStoredOwnerNames(args[1]);
             }
 
             if ("tp".equals(sub)) {
                 if (sender instanceof Player player && canTp(player)) {
-                    return tabLastListedIndexes(player, args[1]);
+                    if (player.hasPermission("graves.admin")) {
+                        return tabStoredOwnerNames(args[1]);
+                    }
+                    return tabOptions(args[1], List.of(player.getName()));
                 }
                 return Collections.emptyList();
             }
         }
 
-        if (args.length == 3 && "list".equals(sub)) {
-            if (sender instanceof Player player && player.hasPermission("graves.admin")) {
-                return tabOptions(args[2], List.of("1", "2", "3", "4", "5"));
+        if (args.length == 3 && "tp".equals(sub)) {
+            if (sender instanceof Player player && canTp(player)) {
+                return tabTeleportIndexes(player, args[1], args[2]);
             }
+            return Collections.emptyList();
+        }
+
+        if (args.length == 3 && "list".equals(sub)) {
+            if (!(sender instanceof Player player) || !player.hasPermission("graves.admin")) {
+                return Collections.emptyList();
+            }
+
+            UUID ownerUuid = resolveStoredOwnerUuid(args[1]);
+            if (ownerUuid == null) {
+                return Collections.emptyList();
+            }
+
+            /*
+             * Admins: /graves list <PlayerName> <page>
+             * Only suggest pages if the selected player actually has more than one page.
+             */
+            return tabListPages(ownerUuid, args[2]);
         }
 
         return Collections.emptyList();
