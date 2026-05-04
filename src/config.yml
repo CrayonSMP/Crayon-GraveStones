@@ -72,6 +72,10 @@ disabledWorlds: []
 # Maximum Graves one page lists with /graves list
 listPageSize: 10
 
+# Date/time format used in /graves list.
+# Uses Java DateTimeFormatter patterns. Example: dd.MM.yyyy HH:mm
+listDateFormat: "dd.MM.yyyy HH:mm"
+
 # Permission used to access the teleportation feature on the ingame chat
 graveTeleportPermission: "graves.admin.tp"
 

@@ -17,7 +17,8 @@ list:
   noOther: "&7That player doesn't have any Gravestones in the Save-Table."
   titleSelf: "&aYour available Gravestones (&f{count}&a)&7(Page {page}/{pages}):"
   titleOther: "&aGravestones of &f{player} &a(&f{count}&a)&7(Page {page}/{pages}):"
-  entry: "&7- &f{player} &7@ &e{x} {y} {z} &7({world})"
+  entry: "&7- &8#{index} &f{player} &7@ &e{x} {y} {z} &7({world}) &8| &7{date}"
+  hoverTeleport: "&aClick to teleport to grave #{index}\n&7Owner: &f{player}\n&7Created: &f{date}\n&7Location: &e{x} {y} {z} &7({world})"
   usage: "&eUsage: /graves list &7| /graves list <PlayerName>"
 
 nav:
@@ -26,14 +27,20 @@ nav:
   sep: " &8| "
   page: "&7Page {page}/{pages}"
 
+tp:
+  usage: "&eUsage: /graves tp <list-number> &7(Open /graves list first)"
+  notFound: "&cCould not find that grave. Open &e/graves list &cagain and use the shown number."
+  done: "&aTeleported to grave &f#{index}&a from &f{player}&a (&7{date}&a)."
+
 emergency:
-  usage: "&eUsage: /graves emergency <PlayerName>"
+  usage: "&eUsage: /graves emergency &7(Look directly at a grave)"
   onlyEmergencyPlayer: "&cThis command is restricted."
   noGraveFound: "&cNo gravestone found for that player."
-  done: "&aEmergency opened latest gravestone of &f{player}&a (items dropped)."
+  noTargetGrave: "&cLook directly at a gravestone within &f{distance}&c blocks and run the command again."
+  done: "&aEmergency opened the gravestone of &f{player}&a (&7{date}&a)."
 
 usage:
-  main: "&eUsage: /graves reload &7(Admin) &e| /graves list &7[(PlayerName) | Admin] &e| /graves emergency <PlayerName>"
+  main: "&eUsage: /graves reload &7(Admin) &e| /graves list &7[(PlayerName) | Admin] &e| /graves tp <list-number> &7(Admin) &e| /graves emergency &7(Restricted)"
 
 warnings:
   storageNearLimit:
