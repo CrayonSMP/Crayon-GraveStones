@@ -108,6 +108,17 @@ debug:
   migration: false
   sql: false
 
+# Modrinth update checker.
+# Project/API values are fixed internally by the plugin.
+updateChecker:
+  enabled: true
+  checkOnStartup: true
+  checkIntervalHours: 12
+  notifyOnlineAdmins: true
+  notifyAdminsOnJoin: true
+  includePrereleases: false
+  logErrors: true
+
 # Minecraft 1.21.6+ Locator-Bar integration.
 # This version uses only waypoint colors. No resource-pack textures/styles are required.
 # Colors can be vanilla names like gray/gold/aqua or hex values like #55FFFF.

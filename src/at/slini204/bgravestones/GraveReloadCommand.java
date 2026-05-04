@@ -411,6 +411,22 @@ public class GraveReloadCommand implements CommandExecutor, TabCompleter {
                 return true;
             }
 
+            case "updatecheck": {
+                if (!sender.hasPermission("graves.admin")) {
+                    plugin.getMessages().send(sender, "errors.noPermission");
+                    return true;
+                }
+
+                if (plugin.getUpdateChecker() == null) {
+                    sender.sendMessage(ChatColor.translateAlternateColorCodes('&',
+                            "&8[&6bGraveStones&8] &cUpdate checker is not available right now."));
+                    return true;
+                }
+
+                plugin.getUpdateChecker().checkNow(sender);
+                return true;
+            }
+
             case "tp": {
                 if (!(sender instanceof Player player)) {
                     plugin.getMessages().send(sender, "errors.onlyIngame");
@@ -688,6 +704,7 @@ public class GraveReloadCommand implements CommandExecutor, TabCompleter {
 
             if (sender.hasPermission("graves.admin")) {
                 options.add("reload");
+                options.add("updatecheck");
             }
 
             String locatorAllPermission = plugin.getConfig().getString("locatorBar.graves.viewAllPermission", "graves.admin");

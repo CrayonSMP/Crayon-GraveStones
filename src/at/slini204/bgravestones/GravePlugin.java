@@ -11,6 +11,7 @@ import at.slini204.bgravestones.storage.GraveStorage;
 import at.slini204.bgravestones.storage.IGraveStorage;
 import at.slini204.bgravestones.storage.MySqlConfig;
 import at.slini204.bgravestones.storage.MySqlGraveStorage;
+import at.slini204.bgravestones.util.ModrinthUpdateChecker;
 import org.bukkit.Bukkit;
 import org.bukkit.command.PluginCommand;
 import org.bukkit.configuration.file.FileConfiguration;
@@ -32,6 +33,7 @@ public final class GravePlugin extends JavaPlugin {
     private GraveStorage yamlStorage;
     private MessageManager messages;
     private LocatorBarManager locatorBarManager;
+    private ModrinthUpdateChecker updateChecker;
 
     @Override
     public void onEnable() {
@@ -57,45 +59,38 @@ public final class GravePlugin extends JavaPlugin {
                 + ").");
 
         this.locatorBarManager = new LocatorBarManager(this);
-
+        this.updateChecker = new ModrinthUpdateChecker(this);
         registerListeners();
         registerCommand();
 
         this.graveManager.bootstrapVisuals();
         this.locatorBarManager.start();
+        this.updateChecker.start();
 
         getLogger().info("[bGraveStones] enabled.");
     }
 
     @Override
     public void onDisable() {
-        if (this.locatorBarManager != null) {
-            this.locatorBarManager.shutdown();
-        }
-
-        if (this.graveManager != null) {
-            this.graveManager.shutdown();
-        }
-
+        if (this.updateChecker != null) this.updateChecker.shutdown();
+        if (this.locatorBarManager != null) this.locatorBarManager.shutdown();
+        if (this.graveManager != null) this.graveManager.shutdown();
         if (this.graveStorage != null) {
             this.graveStorage.save();
             this.graveStorage.close();
         }
-
         getLogger().info("[bGraveStones] disabled.");
     }
 
     private void registerListeners() {
-        register(new DeathListener(this.graveManager));
-        register(new InteractListener(this.graveManager));
-        register(new PickupListener(this.graveManager));
-        register(new EntityProtectionListener(this.graveManager));
-        register(new BlockListener(this.graveManager));
-        register(new ExplosionListener(this.graveManager));
-
-        if (this.locatorBarManager != null) {
-            register(this.locatorBarManager);
-        }
+        register(new DeathListener(graveManager));
+        register(new InteractListener(graveManager));
+        register(new PickupListener(graveManager));
+        register(new EntityProtectionListener(graveManager));
+        register(new BlockListener(graveManager));
+        register(new ExplosionListener(graveManager));
+        register(locatorBarManager);
+        register(updateChecker);
     }
 
     private void register(Listener listener) {
@@ -104,14 +99,11 @@ public final class GravePlugin extends JavaPlugin {
 
     private void registerCommand() {
         PluginCommand cmd = getCommand("graves");
-
-        if (cmd == null) {
-            return;
+        if (cmd != null) {
+            GraveReloadCommand graveCommand = new GraveReloadCommand(this);
+            cmd.setExecutor(graveCommand);
+            cmd.setTabCompleter(graveCommand);
         }
-
-        GraveReloadCommand graveCommand = new GraveReloadCommand(this);
-        cmd.setExecutor(graveCommand);
-        cmd.setTabCompleter(graveCommand);
     }
 
     private boolean initStorage(boolean allowMigration) {
@@ -190,6 +182,8 @@ public final class GravePlugin extends JavaPlugin {
             this.locatorBarManager.start();
         }
 
+        if (this.updateChecker != null) this.updateChecker.start();
+
         if (this.graveStorage != null) {
             getLogger().info("[bGraveStones] Loaded "
                     + this.graveStorage.getAll().size()
@@ -223,6 +217,10 @@ public final class GravePlugin extends JavaPlugin {
 
     public LocatorBarManager getLocatorBarManager() {
         return this.locatorBarManager;
+    }
+
+    public ModrinthUpdateChecker getUpdateChecker() {
+        return this.updateChecker;
     }
 
     private MySqlConfig loadMySqlConfig() {

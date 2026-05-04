@@ -28,8 +28,8 @@ nav:
   page: "&7Page {page}/{pages}"
 
 tp:
-  usage: "&eUsage: /graves tp <list-number> &7(Open /graves list first)"
-  notFound: "&cCould not find that grave. Open &e/graves list &cagain and use the shown number."
+  usage: "&eUsage: /graves tp <PlayerName> <ID> &7(Use the #ID from /graves list <PlayerName>)"
+  notFound: "&cCould not find that grave. Use &e/graves list <PlayerName>&c and then &e/graves tp <PlayerName> <ID>&c."
   done: "&aTeleported to grave &f#{index}&a from &f{player}&a (&7{date}&a)."
 
 emergency:
@@ -40,7 +40,7 @@ emergency:
   done: "&aEmergency opened the gravestone of &f{player}&a (&7{date}&a)."
 
 usage:
-  main: "&eUsage: /graves reload &7(Admin) &e| /graves list &7[(PlayerName) | Admin] &e| /graves tp <PlayerName> <ID> &7(Admin) &e| /graves emergency &7(Emergency) &e| /graves locatorall <on|off|toggle> &7(Admin)"
+  main: "&eUsage: /graves reload &7(Admin) &e| /graves updatecheck &7(Admin) &e| /graves list &7[(PlayerName) | Admin] &e| /graves tp <PlayerName> <ID> &7(Admin) &e| /graves emergency &7(Emergency) &e| /graves locatorall <on|off|toggle> &7(Admin)"
 
 warnings:
   storageNearLimit:

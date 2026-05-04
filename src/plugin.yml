@@ -7,12 +7,10 @@ description: Gravestones with configurable loot/ownership rules.
 commands:
   graves:
     description: betterGraveStones commands.
-    usage: /graves <reload|list|tp|emergency>
+    usage: /graves <reload|updatecheck|list|tp|emergency|locatorall>
     permission: graves.use
 permissions:
   graves.use:
     default: true
   graves.admin:
-    default: op
-  graves.admin.tp:
     default: op
