@@ -3,6 +3,9 @@
 # if you see exclamation marks at one variable, that means you'll need to restart the server
 # after you saved the configuration part which needs a restart, for all other options a reload should do it
 
+#DO NOT CHANGE THIS VERSION NUMBER except you wanna have fun breaking your file
+configVersion: 1
+
 # If true, only the owner (dead player) can loot the grave.
 # (If this option is enabled, please set allowOthersToLoot to false otherwise a double Error Message appears)
 ownerOnly: false
