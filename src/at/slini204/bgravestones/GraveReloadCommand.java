@@ -388,6 +388,28 @@ public class GraveReloadCommand implements CommandExecutor, TabCompleter {
         return result.size() > 50 ? new ArrayList<>(result.subList(0, 50)) : result;
     }
 
+    private boolean canUseSudo(CommandSender sender) {
+        String permission = plugin.getConfig().getString("adminSudo.permission", "graves.admin.sudo");
+        return sender != null && sender.hasPermission(permission);
+    }
+
+    private int parseRadius(String[] args, int index) {
+        if (args == null || args.length <= index) {
+            return plugin.getConfig().getInt("adminSudo.defaultRadius", 8);
+        }
+
+        Integer radius = tryParseInt(args[index]);
+        return radius == null ? plugin.getConfig().getInt("adminSudo.defaultRadius", 8) : radius;
+    }
+
+    private List<String> tabSudoSubCommands(String input) {
+        return tabOptions(input, List.of("inspect-nearby", "cleanup-nearby", "cleanup-orphans", "resync-visuals"));
+    }
+
+    private List<String> tabRadius(String input) {
+        return tabOptions(input, List.of("4", "8", "16", "32", "64"));
+    }
+
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (args.length == 0) {
@@ -641,6 +663,63 @@ public class GraveReloadCommand implements CommandExecutor, TabCompleter {
             }
 
 
+            case "sudo": {
+                if (!canUseSudo(sender)) {
+                    plugin.getMessages().send(sender, "errors.noPermission");
+                    return true;
+                }
+
+                if (plugin.getAdminGraveCleanupService() == null) {
+                    sender.sendMessage(ChatColor.translateAlternateColorCodes('&',
+                            "&8[&6bGraveStones&8] &cAdmin cleanup service is not available right now."));
+                    return true;
+                }
+
+                if (args.length < 2) {
+                    plugin.getMessages().send(sender, "sudo.usage");
+                    return true;
+                }
+
+                String action = args[1].toLowerCase(Locale.ROOT);
+
+                switch (action) {
+                    case "inspect-nearby": {
+                        if (!(sender instanceof Player player)) {
+                            plugin.getMessages().send(sender, "errors.onlyIngame");
+                            return true;
+                        }
+
+                        plugin.getAdminGraveCleanupService().inspectNearby(player, parseRadius(args, 2));
+                        return true;
+                    }
+
+                    case "cleanup-nearby": {
+                        if (!(sender instanceof Player player)) {
+                            plugin.getMessages().send(sender, "errors.onlyIngame");
+                            return true;
+                        }
+
+                        plugin.getAdminGraveCleanupService().cleanupNearby(player, parseRadius(args, 2));
+                        return true;
+                    }
+
+                    case "cleanup-orphans": {
+                        plugin.getAdminGraveCleanupService().cleanupOrphans(sender);
+                        return true;
+                    }
+
+                    case "resync-visuals": {
+                        plugin.getAdminGraveCleanupService().resyncVisuals(sender);
+                        return true;
+                    }
+
+                    default: {
+                        plugin.getMessages().send(sender, "sudo.usage");
+                        return true;
+                    }
+                }
+            }
+
             case "locatorall":
             case "waypointsall":
             case "showall": {
@@ -707,6 +786,10 @@ public class GraveReloadCommand implements CommandExecutor, TabCompleter {
                 options.add("updatecheck");
             }
 
+            if (canUseSudo(sender)) {
+                options.add("sudo");
+            }
+
             String locatorAllPermission = plugin.getConfig().getString("locatorBar.graves.viewAllPermission", "graves.admin");
             if (sender.hasPermission(locatorAllPermission)) {
                 options.add("locatorall");
@@ -733,6 +816,10 @@ public class GraveReloadCommand implements CommandExecutor, TabCompleter {
                     return tabOptions(args[1], List.of("on", "off", "toggle"));
                 }
                 return Collections.emptyList();
+            }
+
+            if ("sudo".equals(sub)) {
+                return canUseSudo(sender) ? tabSudoSubCommands(args[1]) : Collections.emptyList();
             }
 
             if ("list".equals(sub)) {
@@ -764,6 +851,18 @@ public class GraveReloadCommand implements CommandExecutor, TabCompleter {
                 }
                 return Collections.emptyList();
             }
+        }
+
+        if (args.length == 3 && "sudo".equals(sub)) {
+            if (!canUseSudo(sender)) {
+                return Collections.emptyList();
+            }
+
+            String action = args[1].toLowerCase(Locale.ROOT);
+            if ("inspect-nearby".equals(action) || "cleanup-nearby".equals(action)) {
+                return tabRadius(args[2]);
+            }
+            return Collections.emptyList();
         }
 
         if (args.length == 3 && "tp".equals(sub)) {

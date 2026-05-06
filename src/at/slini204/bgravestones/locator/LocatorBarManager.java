@@ -28,6 +28,7 @@ import org.bukkit.event.entity.EntityPortalEvent;
 import org.bukkit.event.entity.EntityTeleportEvent;
 import org.bukkit.event.player.PlayerChangedWorldEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.world.ChunkLoadEvent;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.plugin.Plugin;
@@ -104,6 +105,7 @@ public final class LocatorBarManager implements Listener {
     private boolean graveMarkerCancelTeleport;
     private boolean graveMarkerRespawnIfKilled;
     private String graveViewAllPermission;
+    private boolean graveRememberViewAllUntilRestart;
     private boolean graveStrictVisibility;
     private double gravePrivacySafetyMargin;
 
@@ -150,6 +152,7 @@ public final class LocatorBarManager implements Listener {
         graveGlowWhenNear = graves == null || graves.getBoolean("glowWhenNear", true);
         graveUpdateIntervalTicks = clampLong(graves == null ? 40L : graves.getLong("updateIntervalTicks", 40L), 20L, 20L * 60L * 5L);
         graveViewAllPermission = graves == null ? "graves.admin" : graves.getString("viewAllPermission", "graves.admin");
+        graveRememberViewAllUntilRestart = graves == null || graves.getBoolean("rememberViewAllUntilRestart", true);
         graveStrictVisibility = graves == null || graves.getBoolean("strictVisibility", true);
         gravePrivacySafetyMargin = clampDouble(graves == null ? 1.0D : graves.getDouble("privacySafetyMargin", 1.0D), 0.0D, 16.0D);
 
@@ -1195,6 +1198,13 @@ public final class LocatorBarManager implements Listener {
                     },
                     20L
             );
+        }
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR)
+    public void onPlayerQuit(PlayerQuitEvent event) {
+        if (!graveRememberViewAllUntilRestart && event.getPlayer() != null) {
+            adminsViewingAllGraves.remove(event.getPlayer().getUniqueId());
         }
     }
 

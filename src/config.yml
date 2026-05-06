@@ -3,7 +3,7 @@
 # if you see exclamation marks at one variable, that means you'll need to restart the server
 # after you saved the configuration part which needs a restart, for all other options a reload should do it
 
-configVersion: 2
+configVersion: 3
 
 
 # Server platform compatibility checks.
@@ -22,6 +22,18 @@ compatibility:
       # Automatically disables Locator-Bar support on unsupported platforms/versions.
       # Locator-Bar requires a compatible non-Folia server on Minecraft 1.21.6+.
       autoDisableWhenUnsupported: true
+
+# Dangerous admin repair/cleanup tools.
+# These commands only operate on plugin-owned visual entities and are intended for broken/orphaned markers.
+adminSudo:
+  # Separate high-level permission for /graves sudo commands.
+  permission: "graves.admin.sudo"
+  # Default radius for /graves sudo inspect-nearby and cleanup-nearby.
+  defaultRadius: 8
+  # Hard safety limit for cleanup/inspect radius.
+  maxRadius: 64
+  # Maximum amount of entities shown by inspect-nearby.
+  maxInspectResults: 20
 
 # If true, only the owner (dead player) can loot the grave.
 # (If this option is enabled, please set allowOthersToLoot to false otherwise a double Error Message appears)
@@ -205,6 +217,9 @@ locatorBar:
     # Normal players only can see own Waypoints.
     # Admins can toggle to see all Waypoints from all players on the server with  /graves locatorall <on|off|toggle>
     viewAllPermission: "graves.admin"
+    # true = /graves locatorall state is remembered until the next server restart.
+    # false = admins lose the temporary view-all state when they disconnect.
+    rememberViewAllUntilRestart: true
 
     markerProtection:
       # Protects the hidden armor stand used as the grave locator marker.

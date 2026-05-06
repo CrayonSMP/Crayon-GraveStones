@@ -1,7 +1,6 @@
 # All in-game messages (chat + broadcast). Color codes: use &
 
-#DO NOT CHANGE THIS VERSION NUMBER except you wanna have fun breaking your file
-messagesVersion: 1
+messagesVersion: 2
 
 errors:
   noPermission: "&cYou don't have the needed permissions to do that."
@@ -42,8 +41,11 @@ emergency:
   noTargetGrave: "&cLook directly at a gravestone within &f{distance}&c blocks and run the command again."
   done: "&aEmergency opened the gravestone of &f{player}&a (&7{date}&a)."
 
+sudo:
+  usage: "&eUsage: /graves sudo <inspect-nearby|cleanup-nearby|cleanup-orphans|resync-visuals> [radius]"
+
 usage:
-  main: "&eUsage: /graves reload &7(Admin) &e| /graves updatecheck &7(Admin) &e| /graves list &7[(PlayerName) | Admin] &e| /graves tp <PlayerName> <ID> &7(Admin) &e| /graves emergency &7(Emergency) &e| /graves locatorall <on|off|toggle> &7(Admin)"
+  main: "&eUsage: /graves reload &7(Admin) &e| /graves updatecheck &7(Admin) &e| /graves list &7[(PlayerName) | Admin] &e| /graves tp <PlayerName> <ID> &7(Admin) &e| /graves emergency &7(Emergency) &e| /graves locatorall <on|off|toggle> &7(Admin) &e| /graves sudo <action> &7(Admin)"
 
 warnings:
   storageNearLimit:

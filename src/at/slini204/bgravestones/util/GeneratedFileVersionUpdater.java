@@ -18,8 +18,8 @@ import java.util.List;
 
 public final class GeneratedFileVersionUpdater {
 
-    private static final int CURRENT_CONFIG_VERSION = 2;
-    private static final int CURRENT_MESSAGES_VERSION = 1;
+    private static final int CURRENT_CONFIG_VERSION = 3;
+    private static final int CURRENT_MESSAGES_VERSION = 2;
     private static final int CURRENT_MYSQL_CONFIG_VERSION = 1;
 
     private static final DateTimeFormatter BACKUP_TIMESTAMP_FORMAT = DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss");
