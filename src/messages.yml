@@ -1,5 +1,8 @@
 # All in-game messages (chat + broadcast). Color codes: use &
 
+#DO NOT CHANGE THIS VERSION NUMBER except you wanna have fun breaking your file
+messagesVersion: 1
+
 errors:
   noPermission: "&cYou don't have the needed permissions to do that."
   onlyIngame: "&conly ingame available."

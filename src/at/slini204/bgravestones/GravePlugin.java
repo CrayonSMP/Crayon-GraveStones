@@ -11,6 +11,7 @@ import at.slini204.bgravestones.storage.GraveStorage;
 import at.slini204.bgravestones.storage.IGraveStorage;
 import at.slini204.bgravestones.storage.MySqlConfig;
 import at.slini204.bgravestones.storage.MySqlGraveStorage;
+import at.slini204.bgravestones.util.GeneratedFileVersionUpdater;
 import at.slini204.bgravestones.util.ModrinthUpdateChecker;
 import org.bukkit.Bukkit;
 import org.bukkit.command.PluginCommand;
@@ -34,10 +35,13 @@ public final class GravePlugin extends JavaPlugin {
     private MessageManager messages;
     private LocatorBarManager locatorBarManager;
     private ModrinthUpdateChecker updateChecker;
+    private GeneratedFileVersionUpdater generatedFileVersionUpdater;
 
     @Override
     public void onEnable() {
         saveDefaultConfig();
+        updateGeneratedPluginFiles();
+        reloadConfig();
 
         this.messages = new MessageManager(this);
         this.messages.reload();
@@ -163,6 +167,7 @@ public final class GravePlugin extends JavaPlugin {
     }
 
     public void reloadPlugin() {
+        updateGeneratedPluginFiles();
         reloadConfig();
 
         if (this.messages != null) {
@@ -221,6 +226,15 @@ public final class GravePlugin extends JavaPlugin {
 
     public ModrinthUpdateChecker getUpdateChecker() {
         return this.updateChecker;
+    }
+
+
+    private void updateGeneratedPluginFiles() {
+        if (this.generatedFileVersionUpdater == null) {
+            this.generatedFileVersionUpdater = new GeneratedFileVersionUpdater(this);
+        }
+
+        this.generatedFileVersionUpdater.updateAll();
     }
 
     private MySqlConfig loadMySqlConfig() {

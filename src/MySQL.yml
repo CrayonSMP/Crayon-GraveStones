@@ -1,4 +1,8 @@
 # If enabled=false OR the values below are still the sample values, MySQL will NOT be used.
+
+#DO NOT CHANGE THIS VERSION NUMBER except you wanna have fun breaking your file
+mysqlConfigVersion: 1
+
 enabled: false
 
 host: "127.0.0.1"
