@@ -1,6 +1,6 @@
 name: betterGraveStones
 main: at.slini204.bgravestones.GravePlugin
-version: 2.7.5
+version: 2.7.6
 api-version: "1.21"
 folia-supported: true
 authors: [ "SLINIcraftet204" ]
@@ -8,10 +8,14 @@ description: Gravestones with configurable loot/ownership rules.
 commands:
   graves:
     description: betterGraveStones commands.
-    usage: /graves <reload|updatecheck|list|tp|emergency|locatorall>
+    usage: /graves <reload|updatecheck|list|tp|emergency|locatorall|sudo>
     permission: graves.use
 permissions:
   graves.use:
     default: true
   graves.admin:
+    default: op
+  graves.admin.tp:
+    default: op
+  graves.admin.sudo:
     default: op

@@ -13,6 +13,7 @@ import at.slini204.bgravestones.storage.IGraveStorage;
 import at.slini204.bgravestones.storage.MySqlConfig;
 import at.slini204.bgravestones.storage.MySqlGraveStorage;
 import at.slini204.bgravestones.util.GeneratedFileVersionUpdater;
+import at.slini204.bgravestones.util.AdminGraveCleanupService;
 import at.slini204.bgravestones.util.ModrinthUpdateChecker;
 import org.bukkit.Bukkit;
 import org.bukkit.command.PluginCommand;
@@ -38,6 +39,7 @@ public final class GravePlugin extends JavaPlugin {
     private ModrinthUpdateChecker updateChecker;
     private GeneratedFileVersionUpdater generatedFileVersionUpdater;
     private ServerCompatibility serverCompatibility;
+    private AdminGraveCleanupService adminGraveCleanupService;
 
     @Override
     public void onEnable() {
@@ -80,6 +82,7 @@ public final class GravePlugin extends JavaPlugin {
         }
 
         this.updateChecker = new ModrinthUpdateChecker(this);
+        this.adminGraveCleanupService = new AdminGraveCleanupService(this);
         registerListeners();
         registerCommand();
 
@@ -267,6 +270,10 @@ public final class GravePlugin extends JavaPlugin {
 
     public ModrinthUpdateChecker getUpdateChecker() {
         return this.updateChecker;
+    }
+
+    public AdminGraveCleanupService getAdminGraveCleanupService() {
+        return this.adminGraveCleanupService;
     }
 
     public ServerCompatibility getServerCompatibility() {
