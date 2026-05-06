@@ -2,7 +2,8 @@
   <img src="https://img.shields.io/github/v/release/SLINIcraftet204/bGraveStones?include_prereleases&label=release" alt="GitHub release">
   <img src="https://github.com/SLINIcraftet204/bGraveStones/actions/workflows/build.yml/badge.svg" alt="Build status">
   <img src="https://img.shields.io/badge/focus%20MC%20Version-1.21.6%2B-brightgreen" alt="focus MC Version 1.21.6+">
-  <img src="https://img.shields.io/badge/Server-Paper%20recommended-blue" alt="Paper recommended">
+  <img src="https://img.shields.io/badge/Server-Paper%20%7C%20Purpur-blue" alt="Paper and Purpur">
+  <img src="https://img.shields.io/badge/Folia-detected%20%2F%20blocked%20by%20default-orange" alt="Folia detected but blocked by default">
   <img src="https://img.shields.io/badge/Java-21-orange" alt="Java 21">
   <img src="https://img.shields.io/badge/Storage-YAML%20%7C%20MySQL-lightgrey" alt="YAML and MySQL storage">
   <img src="https://img.shields.io/badge/License-All%20Rights%20Reserved-red" alt="All Rights Reserved">
@@ -29,28 +30,51 @@ It is designed for survival servers that want to reduce unfair item loss from de
 - Creates protected graves on player death
 - Safely stores dropped items and configurable experience amounts
 - Players can recover their own graves
-- Admin tools for listing, inspecting, and managing graves
+- Admin tools for listing, inspecting, teleporting to, and managing graves
 - Offline player grave lookup with tab-completion
 - Configurable messages and world restrictions
+- Versioned generated files for `config.yml`, `messages.yml`, and `MySQL.yml`
+- Safe generated-file updates that preserve existing user values
 - YAML storage with optional MySQL/MariaDB support
 - Automatic YAML-to-MySQL migration
 - Improved MySQL keep-alive handling
+- Optional Modrinth update checker
 - Optional Locator Bar integration for supported Minecraft/Paper versions
 - Optional player colors, UUID gradients, and privacy-focused grave waypoints
 - Protected internal marker entities for Locator Bar grave markers
+- Server platform detection for Paper, Purpur, Folia and related Bukkit/Paper platforms
 
 ---
 
 ## Compatibility
 
-| Component | Requirement |
+| Component | Status |
 | --- | --- |
 | Minecraft | 1.21.6+ recommended |
-| Server software | Paper recommended |
+| Paper | Recommended |
+| Purpur | Supported / tested |
+| Spigot/Bukkit | Not the primary target; may depend on used APIs/features |
+| Folia | Detected, but blocked by default until native Folia support exists |
 | Java | Use the Java version required by your server version |
 | Storage | YAML by default, optional MySQL/MariaDB |
 
 The optional Locator Bar integration depends on modern Minecraft/Paper waypoint support and should only be enabled on compatible server versions.
+
+### Compatibility config
+
+```yml
+compatibility:
+  logPlatformOnStartup: true
+
+  folia:
+    disablePlugin: true
+
+  features:
+    locatorBar:
+      autoDisableWhenUnsupported: true
+```
+
+Folia is currently **not natively supported**. It is detected and blocked by default to prevent unsafe scheduler, teleport, world, or entity access.
 
 ---
 
@@ -64,40 +88,31 @@ The optional Locator Bar integration depends on modern Minecraft/Paper waypoint 
     - `config.yml`
     - `messages.yml`
     - `MySQL.yml`
-6. Restart the server after changing storage-related settings.
+6. Restart the server after changing storage, compatibility, or Locator Bar settings.
 
 > Avoid updating or reloading this plugin through `/reload` or plugin managers such as PlugMan. A full server restart is strongly recommended.
 
 ---
 
-## Configuration Files
+## Generated file versioning
 
-### `config.yml`
+betterGraveStones version-controls generated plugin files and updates them defensively.
 
-Main plugin configuration. It controls grave behavior, XP recovery, looting rules, holograms, world restrictions, sounds, debug options, and Locator Bar settings.
+| File | Version key |
+| --- | --- |
+| `config.yml` | `configVersion` |
+| `messages.yml` | `messagesVersion` |
+| `MySQL.yml` | `mysqlConfigVersion` |
 
-Important options include:
+The updater can add missing keys from the bundled default files while keeping existing user values unchanged.
 
-```yml
-ownerOnly: false
-allowOthersToLoot: true
-protectDropsForOpener: true
-protectedDropTimeoutSeconds: 180
-graveBlock: ANDESITE_WALL
-graveLimit: 10
-xpRestoreFraction: 0.33
-captureDrops: true
-adminCanBreak: true
-disabledWorlds: []
+Backups are created before generated files are modified:
+
+```text
+plugins/betterGraveStones/backups/generated-files/
 ```
 
-### `messages.yml`
-
-Contains all configurable in-game messages. Color codes using `&` are supported.
-
-### `MySQL.yml`
-
-Controls optional MySQL/MariaDB database storage.
+This helps users update safely without losing customized messages, database settings, or gameplay options.
 
 ---
 
@@ -118,8 +133,9 @@ With YAML storage, `graveLimit` is used to limit the maximum amount of stored gr
 To enable database storage, edit `MySQL.yml`:
 
 ```yml
-enabled: true
+mysqlConfigVersion: 1
 
+enabled: true
 host: "127.0.0.1"
 port: 3306
 database: "database"
@@ -141,20 +157,32 @@ The plugin validates and reconnects before SQL operations. The optional keep-ali
 
 ---
 
-## Migration from YAML to MySQL
+## Modrinth update checker
 
-If the plugin detects existing YAML graves and a valid MySQL configuration, it can migrate existing graves into the database automatically.
+The plugin can check Modrinth for newer published versions.
 
-Recommended migration steps:
+```yml
+updateChecker:
+  enabled: true
+  checkOnStartup: true
+  checkIntervalHours: 12
+  notifyOnlineAdmins: true
+  notifyAdminsOnJoin: true
+  includePrereleases: false
+  logErrors: true
+```
 
-1. Stop the server.
-2. Back up the plugin folder, especially `graves.yml`.
-3. Configure `MySQL.yml`.
-4. Start the server.
-5. Check the console for migration messages.
-6. Verify that graves are available through `/graves list`.
+Manual check:
 
-If MySQL is disabled or invalid, the plugin falls back to YAML storage.
+```text
+/graves updatecheck
+```
+
+Permission:
+
+```text
+graves.admin
+```
 
 ---
 
@@ -214,13 +242,15 @@ locatorBar:
 | Command | Description | Permission / Access |
 | --- | --- | --- |
 | `/graves list` | Lists your own graves | `graves.use` |
+| `/graves list <page>` | Lists a specific page of your own graves | `graves.use` |
 | `/graves list <player> [page]` | Lists another player's stored graves | `graves.admin` |
-| `/graves tp <graveId>` | Teleports to a grave from the list | Configurable, default `graves.admin.tp` |
+| `/graves tp <player> <id>` | Teleports to a grave using the visible per-player list ID | Configurable, default `graves.admin.tp` |
 | `/graves reload` | Reloads the plugin configuration | `graves.admin` |
-| `/graves emergency <player>` | Opens the newest grave of a stored player in emergency mode | Player must be listed in `emergencyPlayers` |
+| `/graves updatecheck` | Checks Modrinth for a newer release | `graves.admin` |
+| `/graves emergency` | Opens the grave block the configured emergency player is looking at | Player must be listed in `emergencyPlayers` |
 | `/graves locatorall [on/off/toggle]` | Toggles admin visibility for all grave waypoints | Configurable, default `graves.admin` |
 
-Stored offline player names are supported and can be tab-completed in supported commands.
+Stored offline player names are supported and can be tab-completed in supported commands. Grave teleport IDs are the visible `#ID` values from `/graves list`.
 
 ---
 
@@ -229,7 +259,7 @@ Stored offline player names are supported and can be tab-completed in supported 
 | Permission | Default | Description |
 | --- | --- | --- |
 | `graves.use` | `true` | Allows basic use of `/graves` |
-| `graves.admin` | `op` | Allows admin actions such as reload, listing other players, admin grave access, and Locator Bar admin visibility |
+| `graves.admin` | `op` | Allows admin actions such as reload, listing other players, update checks, admin grave access, and Locator Bar admin visibility |
 | `graves.admin.tp` | configurable | Allows teleporting to listed graves through clickable list entries or `/graves tp` |
 
 The teleport permission can be changed in `config.yml`:
@@ -311,6 +341,7 @@ When updating the plugin:
 3. Replace the old `.jar` file.
 4. Start the server.
 5. Check the console for warnings or migration messages.
+6. Check `backups/generated-files/` if generated files were updated.
 
 Do not update using `/reload` or plugin managers. This can cause classloader issues such as `zip file closed`.
 
@@ -331,6 +362,20 @@ password: "your_password"
 
 If the configuration is incomplete, the plugin will fall back to YAML storage.
 
+### Generated files are missing new options
+
+The generated file updater should add missing keys automatically. Check:
+
+```text
+plugins/betterGraveStones/backups/generated-files/
+```
+
+Existing user values should be preserved during normal generated-file updates.
+
+### Folia disables the plugin
+
+This is expected in the current compatibility state. Folia is detected, but native Folia support is not implemented yet.
+
 ### Locator Bar waypoints are not visible
 
 Check:
@@ -341,6 +386,7 @@ Check:
 - The gamerule is enabled.
 - `transmitRange` is not too low.
 - `strictVisibility` is not hiding the marker for privacy reasons.
+- Compatibility auto-disable did not disable the feature.
 
 ### Console shows waypoint command output
 
