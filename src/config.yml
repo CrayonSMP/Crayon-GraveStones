@@ -3,8 +3,25 @@
 # if you see exclamation marks at one variable, that means you'll need to restart the server
 # after you saved the configuration part which needs a restart, for all other options a reload should do it
 
-#DO NOT CHANGE THIS VERSION NUMBER except you wanna have fun breaking your file
-configVersion: 1
+configVersion: 2
+
+
+# Server platform compatibility checks.
+# These settings are intentionally conservative so unsupported server models fail safely.
+compatibility:
+  # Logs detected server platform and Bukkit/Paper version on startup and reload.
+  logPlatformOnStartup: true
+
+  folia:
+    # Folia uses regionized threading and needs special scheduler/entity handling.
+    # This plugin currently targets the classic Bukkit/Paper thread model, so Folia is blocked by default.
+    disablePlugin: true
+
+  features:
+    locatorBar:
+      # Automatically disables Locator-Bar support on unsupported platforms/versions.
+      # Locator-Bar requires a compatible non-Folia server on Minecraft 1.21.6+.
+      autoDisableWhenUnsupported: true
 
 # If true, only the owner (dead player) can loot the grave.
 # (If this option is enabled, please set allowOthersToLoot to false otherwise a double Error Message appears)

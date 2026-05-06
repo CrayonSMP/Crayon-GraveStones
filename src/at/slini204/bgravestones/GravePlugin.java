@@ -1,5 +1,6 @@
 package at.slini204.bgravestones;
 
+import at.slini204.bgravestones.compat.ServerCompatibility;
 import at.slini204.bgravestones.listener.BlockListener;
 import at.slini204.bgravestones.listener.DeathListener;
 import at.slini204.bgravestones.listener.EntityProtectionListener;
@@ -36,12 +37,21 @@ public final class GravePlugin extends JavaPlugin {
     private LocatorBarManager locatorBarManager;
     private ModrinthUpdateChecker updateChecker;
     private GeneratedFileVersionUpdater generatedFileVersionUpdater;
+    private ServerCompatibility serverCompatibility;
 
     @Override
     public void onEnable() {
         saveDefaultConfig();
         updateGeneratedPluginFiles();
         reloadConfig();
+
+        this.serverCompatibility = new ServerCompatibility(this);
+        this.serverCompatibility.logSummary();
+        if (this.serverCompatibility.shouldDisablePlugin()) {
+            getLogger().severe("[bGraveStones] " + this.serverCompatibility.disableReason());
+            getServer().getPluginManager().disablePlugin(this);
+            return;
+        }
 
         this.messages = new MessageManager(this);
         this.messages.reload();
@@ -62,13 +72,21 @@ public final class GravePlugin extends JavaPlugin {
                 + this.graveStorage.getClass().getSimpleName()
                 + ").");
 
-        this.locatorBarManager = new LocatorBarManager(this);
+        if (this.serverCompatibility.shouldCreateLocatorBarManager()) {
+            this.locatorBarManager = new LocatorBarManager(this);
+        } else {
+            this.serverCompatibility.logDisabledLocatorBarIfNeeded();
+            this.locatorBarManager = null;
+        }
+
         this.updateChecker = new ModrinthUpdateChecker(this);
         registerListeners();
         registerCommand();
 
         this.graveManager.bootstrapVisuals();
-        this.locatorBarManager.start();
+        if (this.locatorBarManager != null) {
+            this.locatorBarManager.start();
+        }
         this.updateChecker.start();
 
         getLogger().info("[bGraveStones] enabled.");
@@ -98,6 +116,10 @@ public final class GravePlugin extends JavaPlugin {
     }
 
     private void register(Listener listener) {
+        if (listener == null) {
+            return;
+        }
+
         getServer().getPluginManager().registerEvents(listener, (Plugin) this);
     }
 
@@ -170,6 +192,14 @@ public final class GravePlugin extends JavaPlugin {
         updateGeneratedPluginFiles();
         reloadConfig();
 
+        this.serverCompatibility = new ServerCompatibility(this);
+        this.serverCompatibility.logSummary();
+        if (this.serverCompatibility.shouldDisablePlugin()) {
+            getLogger().severe("[bGraveStones] " + this.serverCompatibility.disableReason());
+            getServer().getPluginManager().disablePlugin(this);
+            return;
+        }
+
         if (this.messages != null) {
             this.messages.reload();
         }
@@ -184,7 +214,18 @@ public final class GravePlugin extends JavaPlugin {
         }
 
         if (this.locatorBarManager != null) {
+            this.locatorBarManager.shutdown();
+        }
+
+        if (this.serverCompatibility.shouldCreateLocatorBarManager()) {
+            if (this.locatorBarManager == null) {
+                this.locatorBarManager = new LocatorBarManager(this);
+                register(this.locatorBarManager);
+            }
             this.locatorBarManager.start();
+        } else {
+            this.serverCompatibility.logDisabledLocatorBarIfNeeded();
+            this.locatorBarManager = null;
         }
 
         if (this.updateChecker != null) this.updateChecker.start();
@@ -226,6 +267,10 @@ public final class GravePlugin extends JavaPlugin {
 
     public ModrinthUpdateChecker getUpdateChecker() {
         return this.updateChecker;
+    }
+
+    public ServerCompatibility getServerCompatibility() {
+        return this.serverCompatibility;
     }
 
 
