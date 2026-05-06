@@ -18,7 +18,7 @@ import java.util.List;
 
 public final class GeneratedFileVersionUpdater {
 
-    private static final int CURRENT_CONFIG_VERSION = 1;
+    private static final int CURRENT_CONFIG_VERSION = 2;
     private static final int CURRENT_MESSAGES_VERSION = 1;
     private static final int CURRENT_MYSQL_CONFIG_VERSION = 1;
 
