@@ -15,7 +15,9 @@
   </a>
 </p>
 
-![](.github/assets/betterGraveStones_Logo.png)
+<p align="center">
+  <img src=".github/assets/betterGraveStones_Logo.png" width="200">
+</p>
 
 # betterGraveStones
 
