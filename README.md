@@ -15,6 +15,8 @@
   </a>
 </p>
 
+![](.github/assets/betterGraveStones_Logo.png)
+
 # betterGraveStones
 
 **betterGraveStones** is a configurable Minecraft server plugin for **Minecraft/Paper 1.21.6+** that creates protected graves when players die, allowing them to recover their dropped items and experience in a controlled and server-friendly way.
