@@ -2,6 +2,7 @@ package at.slini204.bgravestones;
 
 import at.slini204.bgravestones.model.Grave;
 import at.slini204.bgravestones.storage.IGraveStorage;
+import at.slini204.bgravestones.util.CraftEngineGraveBlockSupport;
 
 import java.time.Instant;
 import java.time.ZoneId;
@@ -84,6 +85,7 @@ public class GraveManager {
     private boolean adminCanBreak;
     private DateTimeFormatter hologramDateFormatter;
     private int graveLimit;
+    private final CraftEngineGraveBlockSupport craftEngineGraveBlockSupport;
 
     public GraveManager(GravePlugin plugin, IGraveStorage storage) {
         this.plugin = plugin;
@@ -91,6 +93,7 @@ public class GraveManager {
         this.itemLooterKey = new NamespacedKey((Plugin) plugin, "grave_looter");
         this.itemExpiresKey = new NamespacedKey((Plugin) plugin, "grave_lock_expires");
         this.hologramGraveIdKey = new NamespacedKey((Plugin) plugin, "grave_holo_grave_id");
+        this.craftEngineGraveBlockSupport = new CraftEngineGraveBlockSupport(plugin, this);
         reload();
     }
 
@@ -127,6 +130,7 @@ public class GraveManager {
         this.adminCanBreak = c.getBoolean("adminCanBreak", true);
         this.graveLimit = c.getInt("graveLimit", 10);
         if (this.graveLimit < 0) this.graveLimit = 0;
+        this.craftEngineGraveBlockSupport.reload();
         List<String> dw = c.getStringList("disabledWorlds");
         this.disabledWorlds = new HashSet<>();
         for (String s : dw) this.disabledWorlds.add(s.toLowerCase(Locale.ROOT));
@@ -234,10 +238,10 @@ public class GraveManager {
             World w = Bukkit.getWorld(g.getWorldUuid());
             if (w == null) continue;
             Block b = w.getBlockAt(g.getX(), g.getY(), g.getZ());
-            if (b.getType() == this.graveBlock) continue;
+            if (isPlacedGraveVisual(g, b)) continue;
 
             if (b.isEmpty() || b.isLiquid() || b.isPassable()) {
-                b.setType(this.graveBlock, false);
+                placeGraveVisual(g, b);
             }
         }
     }
@@ -308,6 +312,58 @@ public class GraveManager {
         return this.storage.getAll();
     }
 
+    public boolean shouldSuppressLocatorGlowDisplay(Grave grave) {
+        if (grave == null || !this.craftEngineGraveBlockSupport.shouldSuppressVanillaGlowDisplay()) {
+            return false;
+        }
+
+        World world = Bukkit.getWorld(grave.getWorldUuid());
+        if (world == null) {
+            return false;
+        }
+
+        Block block = world.getBlockAt(grave.getX(), grave.getY(), grave.getZ());
+        return this.craftEngineGraveBlockSupport.isConfiguredCustomGraveVisual(grave, block);
+    }
+
+    private boolean isPlacedGraveVisual(Grave grave, Block block) {
+        if (block == null) {
+            return false;
+        }
+
+        if (block.getType() == this.graveBlock) {
+            return true;
+        }
+
+        return this.craftEngineGraveBlockSupport.isConfiguredCustomGraveVisual(grave, block);
+    }
+
+    private void placeGraveVisual(Grave grave, Block block) {
+        if (block == null) {
+            return;
+        }
+
+        if (this.craftEngineGraveBlockSupport.placeCustomGraveVisual(grave, block)) {
+            return;
+        }
+
+        block.setType(this.graveBlock, false);
+    }
+
+    private void removeGraveVisual(Grave grave, Block block) {
+        if (block == null) {
+            return;
+        }
+
+        if (this.craftEngineGraveBlockSupport.removeCustomGraveVisual(grave, block)) {
+            return;
+        }
+
+        if (block.getType() == this.graveBlock || this.craftEngineGraveBlockSupport.isAnyCustomVisualBlock(block)) {
+            block.setType(Material.AIR, false);
+        }
+    }
+
     public Optional<Grave> createGrave(Player owner, Location deathLoc, Map<Integer, ItemStack> slotItems, ItemStack[] armor, ItemStack offHand, int totalXpPoints) {
 
         if (owner == null || deathLoc == null || deathLoc.getWorld() == null) return Optional.empty();
@@ -332,7 +388,7 @@ public class GraveManager {
         Grave grave = new Grave(graveId, owner.getUniqueId(), owner.getName(), placeAt.getWorld().getUID(), placeAt.getBlockX(), placeAt.getBlockY(), placeAt.getBlockZ(), Instant.now().toEpochMilli(), totalXpPoints, (slotItems == null) ? new HashMap<>() : new HashMap<>(slotItems), (armor == null) ? new ItemStack[0] : armor.clone(), (offHand == null) ? null : offHand.clone());
 
         Block b = placeAt.getBlock();
-        b.setType(this.graveBlock, false);
+        placeGraveVisual(grave, b);
 
         this.storage.put(grave);
 
@@ -647,6 +703,7 @@ public class GraveManager {
 
     public boolean isGraveVisualEntity(UUID entityId) {
         if (isGraveHologram(entityId)) return true;
+        if (this.craftEngineGraveBlockSupport.isManagedFurnitureEntity(entityId)) return true;
         return this.plugin.getLocatorBarManager() != null
                 && this.plugin.getLocatorBarManager().isManagedWaypointEntity(entityId);
     }
@@ -656,9 +713,7 @@ public class GraveManager {
         World w = Bukkit.getWorld(grave.getWorldUuid());
         if (w != null) {
             Block b = w.getBlockAt(grave.getX(), grave.getY(), grave.getZ());
-            if (b.getType() == this.graveBlock) {
-                b.setType(Material.AIR, false);
-            }
+            removeGraveVisual(grave, b);
         }
         if (grave.getHologramEntityId() != null) {
             removeHologramEntity(grave);
@@ -808,7 +863,7 @@ public class GraveManager {
             }
 
             Block b = w.getBlockAt(grave.getX(), grave.getY(), grave.getZ());
-            if (b.getType() != this.graveBlock) continue;
+            if (!isPlacedGraveVisual(grave, b)) continue;
 
             int cx = grave.getX() >> 4;
             int cz = grave.getZ() >> 4;
