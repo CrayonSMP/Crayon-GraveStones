@@ -3,7 +3,7 @@
 # if you see exclamation marks at one variable, that means you'll need to restart the server
 # after you saved the configuration part which needs a restart, for all other options a reload should do it
 
-configVersion: 3
+configVersion: 4
 
 
 # Server platform compatibility checks.
@@ -230,3 +230,23 @@ locatorBar:
       cancelTeleport: true
       # If /kill @e or another command/plugin still manages to kill/remove the marker, recreate it automatically.
       respawnIfKilled: true
+
+# Optional CraftEngine support.
+# If CraftEngine is installed and this section is enabled, the configured furniture/custom block is used as grave visual.
+# If CraftEngine is missing, the configured id is invalid, or placement/removal fails, the plugin falls back to graveBlock.
+craftEngine:
+  enabled: false
+  # Recommended mode for custom grave models/textures. Uses CraftEngineFurniture.place(...) internally.
+  # Possible values: furniture, block
+  mode: "furniture"
+  # CraftEngine furniture id, for example: "my_pack:custom_grave"
+  furniture: ""
+  # Legacy alias / optional custom block id. If furniture is empty, this value is used as fallback id.
+  graveBlock: ""
+  # Recommended for furniture mode.
+  # Disables the extra bGraveStones BlockDisplay glow around CraftEngine furniture graves,
+  # because that overlay can look like a large flat texture plane.
+  suppressVanillaGlowDisplay: true
+  # If CraftEngine finishes loading its namespaces after this plugin, the support is retried after this delay.
+  retryAfterTicks: 80
+  logFallbackWarnings: true

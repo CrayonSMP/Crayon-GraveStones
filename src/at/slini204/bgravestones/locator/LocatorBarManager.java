@@ -597,6 +597,11 @@ public final class LocatorBarManager implements Listener {
     }
 
     private void updateGlowDisplay(Grave grave, boolean near) {
+        if (plugin.getGraveManager() != null && plugin.getGraveManager().shouldSuppressLocatorGlowDisplay(grave)) {
+            removeGlowDisplay(grave);
+            return;
+        }
+
         if (!graveGlowWhenNear || !near || graveNearDistance <= 0.0D) {
             removeGlowDisplay(grave);
             return;
