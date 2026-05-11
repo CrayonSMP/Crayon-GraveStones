@@ -5,8 +5,8 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>at.slini204</groupId>
-    <artifactId>better-GraveStones</artifactId>
-    <version>2.7.2</version>
+    <artifactId>betterGraveStones</artifactId>
+    <version>2.7.7</version>
     <packaging>jar</packaging>
 
     <name>better-GraveStones</name>
