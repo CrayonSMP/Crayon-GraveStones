@@ -36,6 +36,6 @@ jobs:
       - name: Upload plugin jar
         uses: actions/upload-artifact@v7
         with:
-          name: better-GraveStones-jar
-          path: target/better-GraveStones-*.jar
+          name: betterGraveStones-jar
+          path: target/betterGraveStones-*.jar
           if-no-files-found: error

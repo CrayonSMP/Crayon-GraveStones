@@ -5,51 +5,41 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>at.slini204</groupId>
-    <artifactId>better-GraveStones</artifactId>
-    <version>2.7.2</version>
+    <artifactId>betterGraveStones</artifactId>
+    <version>2.7.7</version>
     <packaging>jar</packaging>
 
-    <name>better-GraveStones</name>
+    <name>betterGraveStones</name>
     <description>Gravestones with configurable loot, storage, and Locator Bar support.</description>
 
     <properties>
         <maven.compiler.release>21</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <paper.api.version>1.21.11-R0.1-SNAPSHOT</paper.api.version>
-        <bungeecord.chat.version>1.21-R0.2</bungeecord.chat.version>
     </properties>
 
     <repositories>
         <repository>
-            <id>papermc-repo</id>
+            <id>papermc</id>
             <url>https://repo.papermc.io/repository/maven-public/</url>
-        </repository>
-
-        <repository>
-            <id>sonatype-oss-snapshots</id>
-            <url>https://oss.sonatype.org/content/repositories/snapshots</url>
         </repository>
     </repositories>
 
     <dependencies>
+        <!--
+            Paper is provided by the server at runtime.
+            This dependency is only used by IntelliJ/Maven for code completion and compilation.
+        -->
         <dependency>
             <groupId>io.papermc.paper</groupId>
             <artifactId>paper-api</artifactId>
             <version>${paper.api.version}</version>
             <scope>provided</scope>
         </dependency>
-
-        <!-- Needed for net.md_5.bungee.api.chat.* components used in GraveReloadCommand. -->
-        <dependency>
-            <groupId>net.md-5</groupId>
-            <artifactId>bungeecord-chat</artifactId>
-            <version>${bungeecord.chat.version}</version>
-            <scope>provided</scope>
-        </dependency>
     </dependencies>
 
     <build>
-        <!-- This project currently uses the IntelliJ-style src/ layout. -->
+        <!-- Keep the current IntelliJ-style project layout. No src/main/java migration required. -->
         <sourceDirectory>${project.basedir}/src</sourceDirectory>
 
         <resources>
@@ -65,7 +55,7 @@
             </resource>
         </resources>
 
-        <finalName>better-GraveStones-${project.version}</finalName>
+        <finalName>betterGraveStones-${project.version}</finalName>
 
         <plugins>
             <plugin>
